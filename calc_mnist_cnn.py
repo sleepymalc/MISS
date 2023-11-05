@@ -286,6 +286,18 @@ class Solve:
                 gradients.append(param.grad.flatten())
             self.gradients_list.append(torch.cat(gradients))
         torch.save(self.gradients_list, osp.join(self.folder_name, 'gradients.pt'))
+        
+    def calculate_Hessian(self):
+        self.hessian_list = []
+        def loss(params, inputs, targets):
+            prediction = torch.func.functional_call(self.model, params, (inputs,))
+            return self.criterion(prediction, targets)
+
+        for i, sample in tqdm(enumerate(self.train_dataset)):
+            self.hessian_list.append(torch.func.hessian(loss)(dict(self.model.named_parameters()), sample[0].cuda().unsqueeze(0), torch.tensor([sample[1]]).cuda()))
+        
+        print(self.hessian_list[0])
+        torch.save(self.hessian_list, osp.join(self.folder_name, 'Hessian.pt'))
 
 solve = Solve(train_dataset, val_dataset, test_dataset)
 
@@ -293,3 +305,4 @@ solve = Solve(train_dataset, val_dataset, test_dataset)
 solve.reset_model_and_data([])
 solve.train()
 solve.calculate_gradient()
+solve.calculate_Hessian()
