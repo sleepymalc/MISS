@@ -288,16 +288,26 @@ class Solve:
         torch.save(self.gradients_list, osp.join(self.folder_name, 'gradients.pt'))
         
     def calculate_Hessian(self):
-        self.hessian_list = []
-        def loss(params, inputs, targets):
-            prediction = torch.func.functional_call(self.model, params, (inputs,))
-            return self.criterion(prediction, targets)
-
+        self.Hessian_list = []
         for i, sample in tqdm(enumerate(self.train_dataset)):
-            self.hessian_list.append(torch.func.hessian(loss)(dict(self.model.named_parameters()), sample[0].cuda().unsqueeze(0), torch.tensor([sample[1]]).cuda()))
+            loss = self.criterion(self.model(sample[0].cuda().unsqueeze(0)), torch.LongTensor([sample[1]]).cuda())
+            grad_params = torch.autograd.grad(loss, self.model.parameters(), retain_graph=True, create_graph=True)  
+            grad_params = stack_torch_tensors(grad_params)
+            hess_params = torch.zeros((len(grad_params), len(grad_params)))
+            temp = []
+
+            for u in range(len(grad_params)): 
+                second_grad = torch.autograd.grad(grad_params[u], self.model.parameters(), retain_graph=True)
+                temp.append(stack_torch_tensors(second_grad))
+
+            self.Hessian_list.append(torch.cat(temp, axis=1))
         
-        print(self.hessian_list[0])
-        torch.save(self.hessian_list, osp.join(self.folder_name, 'Hessian.pt'))
+        print(self.Hessian_list[0].shape)
+        torch.save(self.Hessian_list, osp.join(self.folder_name, 'Hessian.pt'))
+
+def stack_torch_tensors(input_tensors):
+    unrolled = [input_tensors[k].reshape(-1,1) for k in range(len(input_tensors))]
+    return torch.cat(unrolled)
 
 solve = Solve(train_dataset, val_dataset, test_dataset)
 
