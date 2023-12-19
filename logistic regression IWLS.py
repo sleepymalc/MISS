@@ -2,29 +2,26 @@ import argparse
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from itertools import combinations
+from scipy import stats
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=20)
 parser.add_argument('--n', type=int, default=50)
-parser.add_argument('--b', type=int, default=2)
-parser.add_argument('--k', type=int, default=10)
+parser.add_argument('--k', type=int, default=2)
 parser.add_argument('--cov_str', type=float, default=1)
-parser.add_argument('--out-file', type=str, default='output.txt')
 parser.add_argument('--mode', type=str, default='probability')
 args = parser.parse_args()
 
-np.random.seed(args.seed)
-
-with open(args.out_file, 'w') as f:
-	f.write(f"seed:{args.seed}\n")
- 
 # general parameters
 n = args.n
-cov_str = args.cov_str
-b = args.b
-
-mode = args.mode
 k = args.k
+cov_str = args.cov_str
+mode = args.mode
+seed = args.seed
+ 
+np.random.seed(seed)
+
+out_file = f"results/mode={mode}_seed={seed}_n={n}_k={k}_cov={cov_str}.txt"
 test_point_index = 0
 
 # generate data
@@ -34,7 +31,7 @@ cov = np.eye(2) * cov_str
 x_n = np.random.multivariate_normal(mean_n, cov, n)
 x_p = np.random.multivariate_normal(mean_p, cov, n)
 
-y_n = -np.ones(n)  # -1 labels
+y_n = np.zeros(n) # 0 labels
 y_p = np.ones(n)  # 1 labels
 
 X_train = np.vstack((x_n, x_p))
@@ -78,7 +75,8 @@ def logistic_regression_IWLS(X, y, max_iters=500, tolerance=1e-6):
 	
 	return coef, p
 
-def brute_force_removal(original_logistic_classifier, X_train, y_train, X_test, fixed_test_point_index=0, k=10, mode="linear"):
+# TODO: Store the best 3 subsets for each size
+def brute_force_removal(original_logistic_classifier, X_train, y_train, X_test, fixed_test_point_index=0, k=10, mode=mode):
 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
 	best_subset_fix_test = np.full((k), None)
 	best_reduced_Z_fix_test = np.full((k), None)
@@ -124,7 +122,7 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, X_test, 
 
 	return [best_subset_fix_test, best_reduced_Z_fix_test]
 		
-def calculate_influence(X, X_test, y, coef, W, test_point_index, leverage=False, mode="linear"):
+def calculate_influence(X, X_test, y, coef, W, test_point_index, leverage=True, mode=mode):
 	n_samples = X.shape[0]
 	influences = np.zeros(n_samples)
 
@@ -150,11 +148,13 @@ def calculate_influence(X, X_test, y, coef, W, test_point_index, leverage=False,
 
 parameter = brute_force_removal(logistic_classifier, X_train, y_train, X_test, test_point_index, k)
 
+best_subset = parameter[0][-1]
+
 # print ground truth
-with open(args.out_file, 'w') as f:
+with open(out_file, 'w') as f:
 	f.write('Best Subset\n')
 	for subset_size in range(1, k + 1):
-		f.write(f"\tsize{subset_size}: {parameter[0][subset_size-1]}\n")
+		f.write(f"\tsize {subset_size}: {parameter[0][subset_size-1]}\n")
 
 # Create the IWLS logistic regression model and fit it
 # TODO: this might be avoided since all we need is a converged probability to construct W
@@ -165,14 +165,16 @@ X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
 y = np.dot(X_train_bar, coefficients) + (y_train - p) / W
 
 # Calculate influences
-influences = calculate_influence(X_train_bar, X_test_bar, y, coefficients, W, test_point_index, leverage=True, mode=mode)
+influences = calculate_influence(X_train_bar, X_test_bar, y, coefficients, W, test_point_index)
 
 print_size = k * 2
 
 top_indices = np.argsort(influences)[-(print_size):][::-1]
-with open(args.out_file, 'w') as f:
+appx_best_subset = top_indices[:k]
+
+with open(out_file, 'a') as f:
 	f.write('Approximated Best Subset\n')
-	f.write(f"\tTop {print_size}: {top_indices}\n")
+	f.write(f"\ttop {print_size}: {top_indices}\n")
 
 # Calculate adaptive influences
 coef = coefficients.copy()
@@ -181,8 +183,9 @@ X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
 X_train_bar_with_index = np.hstack((X_train_bar, np.arange(X_train_bar.shape[0]).reshape(-1, 1)))
 y_copy = y_train.copy()
 p_copy = p.copy()
+appx_adaptive_best_subset = np.zeros(k)
 
-with open(args.out_file, 'w') as f:
+with open(out_file, 'a') as f:
 	f.write('Approximated Adaptive Best Subset\n')
  
 for i in range(k):
@@ -190,13 +193,13 @@ for i in range(k):
 	X = X_train_bar_with_index[:, :-1] # without index
 	y = np.dot(X, coef) + (y_copy - p_copy) / W
 	# Calculate influences
-	influences = calculate_influence(X, X_test_bar, y, coef, W, test_point_index, leverage=True, mode=mode)
+	influences = calculate_influence(X, X_test_bar, y, coef, W, test_point_index)
 	top_indices = np.argsort(influences)[-(print_size):][::-1]
 	
 	actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
- 
-	with open(args.out_file, 'w') as f:
-		f.write(f"\tTop {print_size}: {actual_top_indices}\n")
+	appx_adaptive_best_subset[i] = actual_top_indices[0]
+	with open(out_file, 'a') as f:
+		f.write(f"\titer {i+1}:\ttop {print_size}: {actual_top_indices}\n")
 	
 	# Remove the most influential data points
 	X = np.delete(X, top_indices[0], axis=0)
@@ -212,3 +215,11 @@ for i in range(k):
 		gradient = np.dot(X.T, y_copy - p_copy)
 		coef += np.linalg.solve(Hessian, gradient)
 		p_copy = sigmoid(np.dot(X, coef))
+  
+# Result
+# with open(out_file, 'a') as f:
+# 	f.write('Approximated Best Subset v.s. Best Subset\n')
+# 	f.write(f'\tK: {stats.kendalltau(best_subset, appx_best_subset).statistic:.3f} | P: {stats.pearsonr(best_subset, appx_best_subset).statistic:.3f}\n')
+ 
+# 	f.write('Approximated Adaptive Best Subset v.s. Best Subset\n')
+# 	f.write(f'\tK: {stats.kendalltau(best_subset, appx_adaptive_best_subset).statistic:.3f} | P: {stats.pearsonr(best_subset, appx_adaptive_best_subset).statistic:.3f}\n')
