@@ -1,0 +1,43 @@
+Best Subset
+	size 1: (15,)
+	size 2: (10, 15)
+	size 3: (9, 10, 15)
+	size 4: (1, 9, 10, 15)
+	size 5: (1, 9, 10, 12, 15)
+
+IWLS Best Subset
+	top 10: [15 10  9 12  1  8  6  3 32  4]
+
+Adaptive IWLS Best Subset
+	top 5: [15 10  9  1 12]
+
+Margin-based Best Subset
+	positive group:	top 10: [32 39 36 42 45 29 30 28 46 26]
+	negative group:	top 10: [ 8 12  6  1 13 10 15 21  9  4]
+
+Margin-based v.s. IWLS-based
+-size=n/2
+	P Group	K: 0.24000 | P: 0.26545
+	N Group	K: 0.02000 | P: 0.01652
+-size=k
+	P Group	K: -0.40000 | P: -0.76072
+	N Group	K: -0.40000 | P: -0.56260
+-size=2k
+	P Group	K: 0.42222 | P: 0.48858
+	N Group	K: -0.33333 | P: -0.29393
+
+IWLS Best Subset v.s. Best Subset (size=k)
+	max NDCG: 1.00000 | max rbo: 1.00000
+	avg NDCG: 0.87062 | avg rbo: 0.60000
+
+Adaptive IWLS Best Subset v.s. Best Subset (size=k)
+	max NDCG: 1.00000 | max rbo: 1.00000
+	avg NDCG: 0.87062 | avg rbo: 0.60000
+
+Margin-based Best Subset v.s. Best Subset (size=k)
+P Group
+	max NDCG: 1.00000 | max rbo: 0.00000
+	avg NDCG: 0.96229 | avg rbo: 0.00000
+N Group
+	max NDCG: 1.00000 | max rbo: 0.34667
+	avg NDCG: 0.85642 | avg rbo: 0.24000
