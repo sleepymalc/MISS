@@ -11,19 +11,19 @@ parser.add_argument('--seed', type=int, default=20)
 parser.add_argument('--n', type=int, default=50)
 parser.add_argument('--k', type=int, default=2)
 parser.add_argument('--cov_str', type=float, default=1)
-parser.add_argument('--mode', type=str, default='probability')
+parser.add_argument('--target', type=str, default='probability')
 args = parser.parse_args()
 
 # general parameters
 n = args.n
 k = args.k
 cov_str = args.cov_str
-mode = args.mode
+target = args.target
 seed = args.seed
  
 np.random.seed(seed)
 
-out_file = f"results/mode={mode}_seed={seed}_n={n}_k={k}_cov={cov_str}.txt"
+out_file = f"results/target={target}_seed={seed}_n={n}_k={k}_cov={cov_str}.txt"
 
 # generate data
 mean_n = np.array([-1, 0])
@@ -77,7 +77,7 @@ def logistic_regression_IWLS(X, y, max_iters=500, tolerance=1e-6):
 	return coef, p
 
 # TODO: Store the best 3 subsets for each size
-def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, k=10, mode=mode):
+def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, k=10, target=target):
 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
 	best_subset_fix_test = np.full((k), None)
 	best_reduced_Z_fix_test = np.full((k), None)
@@ -85,9 +85,9 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 	## Fixed test point
 	x_test = np.hstack((1, x_test))
 	
-	if mode == "linear":
+	if target == "linear":
 		original_score = np.dot(np.hstack((original_logistic_classifier.intercept_, original_logistic_classifier.coef_[0])), x_test)
-	elif mode == "probability":
+	elif target == "probability":
 		original_score = original_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
 	
 	# Loop over different subset sizes from 1 to k
@@ -108,9 +108,9 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 			reduced_logistic_classifier.fit(reduced_X_train, reduced_y_train)
 
 			# Make inference
-			if mode == "linear":
+			if target == "linear":
 				reduced_score = np.dot(np.hstack((reduced_logistic_classifier.intercept_, reduced_logistic_classifier.coef_[0])), x_test)
-			elif mode == "probability":
+			elif target == "probability":
 				reduced_score = reduced_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
 
 			# Calculate the difference in predicted probabilities
@@ -123,7 +123,7 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 
 	return [best_subset_fix_test, best_reduced_Z_fix_test]
 		
-def calculate_influence(X, x_test, y, coef, W, leverage=True, mode=mode):
+def calculate_influence(X, x_test, y, coef, W, leverage=True, target=target):
 	n_samples = X.shape[0]
 	influences = np.zeros(n_samples)
  
@@ -131,9 +131,9 @@ def calculate_influence(X, x_test, y, coef, W, leverage=True, mode=mode):
 	N_inv = np.linalg.inv(N)
 	r = W * (np.dot(X, coef) - y)
 	
-	if mode == "linear":
+	if target == "linear":
 		influences = np.dot(np.dot(x_test, N_inv), X.T * r)
-	elif mode == "probability":
+	elif target == "probability":
 		sigma = sigmoid(np.dot(x_test, coef))
 		phi = (1 - sigma) * sigma * x_test
 		influences = np.dot(np.dot(phi, N_inv), X.T * r)
@@ -214,7 +214,6 @@ with open(out_file, 'a') as f:
     f.write(f"\ttop {k}: {adaptive_IWLS_best_k}\n\n")
   
 # Margin-based approach
-
 def obtain_param(X, y):
 	clf = LogisticRegression().fit(X, y)
 	ic = clf.intercept_[0]
@@ -297,13 +296,13 @@ with open(out_file, 'a') as f:
 	f.write(f'\tP Group\tK: {stats.kendalltau(ind_p[:2*k], IWLS_best[:2*k]).statistic:.5f} | P: {stats.pearsonr(ind_p[:2*k], IWLS_best[:2*k]).statistic:.5f}\n')
 	f.write(f'\tN Group\tK: {stats.kendalltau(ind_n[:2*k], IWLS_best[:2*k]).statistic:.5f} | P: {stats.pearsonr(ind_n[:2*k], IWLS_best[:2*k]).statistic:.5f}\n\n')
   
-	f.write('Approximated Best Subset v.s. Best Subset (size=k)\n')
+	f.write('IWLS Best Subset v.s. Best Subset (size=k)\n')
 	ndcg, rbo = max_score(best_k_subset, IWLS_best[:k])
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, IWLS_best[:k])
 	f.write(f'\tavg NDCG: {ndcg:.5f} | avg rbo: {rbo:.5f}\n\n')
  
-	f.write('Approximated Adaptive Best Subset v.s. Best Subset (size=k)\n')
+	f.write('Adaptive IWLS Best Subset v.s. Best Subset (size=k)\n')
 	ndcg, rbo = max_score(best_k_subset, adaptive_IWLS_best_k)
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, adaptive_IWLS_best_k)
