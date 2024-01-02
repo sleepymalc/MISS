@@ -1,4 +1,5 @@
 import argparse
+from joblib import Parallel, delayed
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from itertools import combinations, permutations
@@ -11,6 +12,7 @@ parser.add_argument('--seed', type=int, default=20)
 parser.add_argument('--n', type=int, default=50)
 parser.add_argument('--k', type=int, default=2)
 parser.add_argument('--cov_str', type=float, default=1)
+parser.add_argument('--job_n', type=int, default=50)
 parser.add_argument('--target', type=str, default='probability')
 args = parser.parse_args()
 
@@ -23,7 +25,7 @@ seed = args.seed
  
 np.random.seed(seed)
 
-out_file = f"results/target={target}_seed={seed}_n={n}_k={k}_cov={cov_str}.txt"
+out_file = f"results/seed={seed}_n={n}_k={k}_cov={cov_str}_target={target}.txt"
 
 # generate data
 mean_n = np.array([-1, 0])
@@ -76,7 +78,27 @@ def logistic_regression_IWLS(X, y, max_iters=500, tolerance=1e-6):
 	
 	return coef, p
 
-# TODO: Store the best 3 subsets for each size
+def actual_effect(X_train, y_train, x_test, subset_to_remove, original_score):
+	# Create a new training set without the selected data points
+	reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
+	reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
+
+	# Train a Logistic Regression classifier on the reduced training set
+	reduced_logistic_classifier = LogisticRegression(penalty=None)
+
+	reduced_logistic_classifier.fit(reduced_X_train, reduced_y_train)
+
+	# Make inference
+	if target == "linear":
+		reduced_score = np.dot(np.hstack((reduced_logistic_classifier.intercept_, reduced_logistic_classifier.coef_[0])), x_test)
+	elif target == "probability":
+		reduced_score = reduced_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
+
+	# Calculate the difference in predicted probabilities
+	score_difference = reduced_score - original_score
+ 
+	return score_difference
+
 def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, k=10, target=target):
 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
 	best_subset_fix_test = np.full((k), None)
@@ -94,35 +116,63 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 	for subset_size in range(1, k + 1):
 		# Generate all combinations of subsets of the current size
 		subset_combinations = combinations(range(X_train.shape[0]), subset_size)
+		combinations_list = list(combinations(range(X_train.shape[0]), subset_size))
+  
+		scores = Parallel(n_jobs=50)(delayed(actual_effect)(X_train, y_train, x_test, subset_to_remove, original_score) for subset_to_remove in subset_combinations)
+		top_index = np.argmax(scores)
 
-		max_score_difference = -float("inf")
-
-		for subset_to_remove in subset_combinations:
-			# Create a new training set without the selected data points
-			reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
-			reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
-
-			# Train a Logistic Regression classifier on the reduced training set
-			reduced_logistic_classifier = LogisticRegression(penalty=None)
-
-			reduced_logistic_classifier.fit(reduced_X_train, reduced_y_train)
-
-			# Make inference
-			if target == "linear":
-				reduced_score = np.dot(np.hstack((reduced_logistic_classifier.intercept_, reduced_logistic_classifier.coef_[0])), x_test)
-			elif target == "probability":
-				reduced_score = reduced_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
-
-			# Calculate the difference in predicted probabilities
-			score_difference = reduced_score - original_score
-
-			# Update if the current subset induces the maximum change in test loss
-			if score_difference > max_score_difference:
-				max_score_difference = score_difference
-				best_subset_fix_test[subset_size-1] = subset_to_remove
+		best_subset_fix_test[subset_size - 1] = combinations_list[top_index]
+		best_reduced_Z_fix_test[subset_size - 1] = scores[top_index] # TODO likely is a bug
 
 	return [best_subset_fix_test, best_reduced_Z_fix_test]
-		
+
+# def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, k=10, target=target):
+# 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
+# 	best_subset_fix_test = np.full((k), None)
+# 	best_reduced_Z_fix_test = np.full((k), None)
+
+# 	## Fixed test point
+# 	x_test = np.hstack((1, x_test))
+	
+# 	if target == "linear":
+# 		original_score = np.dot(np.hstack((original_logistic_classifier.intercept_, original_logistic_classifier.coef_[0])), x_test)
+# 	elif target == "probability":
+# 		original_score = original_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
+	
+# 	# Loop over different subset sizes from 1 to k
+# 	# with parallel_backend('loky', n_jobs=50):
+# 	for subset_size in range(1, k + 1):
+# 		# Generate all combinations of subsets of the current size
+# 		subset_combinations = combinations(range(X_train.shape[0]), subset_size)
+
+# 		max_score_difference = -float("inf")
+
+# 		for subset_to_remove in subset_combinations:
+# 			# Create a new training set without the selected data points
+# 			reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
+# 			reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
+
+# 			# Train a Logistic Regression classifier on the reduced training set
+# 			reduced_logistic_classifier = LogisticRegression(penalty=None)
+
+# 			reduced_logistic_classifier.fit(reduced_X_train, reduced_y_train)
+
+# 			# Make inference
+# 			if target == "linear":
+# 				reduced_score = np.dot(np.hstack((reduced_logistic_classifier.intercept_, reduced_logistic_classifier.coef_[0])), x_test)
+# 			elif target == "probability":
+# 				reduced_score = reduced_logistic_classifier.predict_proba(x_test[1:].reshape(1, -1))[0][1]
+
+# 			# Calculate the difference in predicted probabilities
+# 			score_difference = reduced_score - original_score
+
+# 			# Update if the current subset induces the maximum change in test loss
+# 			if score_difference > max_score_difference:
+# 				max_score_difference = score_difference
+# 				best_subset_fix_test[subset_size-1] = subset_to_remove
+
+# 	return [best_subset_fix_test, best_reduced_Z_fix_test]
+
 def calculate_influence(X, x_test, y, coef, W, leverage=True, target=target):
 	n_samples = X.shape[0]
 	influences = np.zeros(n_samples)
@@ -210,8 +260,8 @@ for i in range(k):
 		p_copy = sigmoid(np.dot(X, coef))
   
 with open(out_file, 'a') as f:
-    f.write('Adaptive IWLS Best Subset\n')
-    f.write(f"\ttop {k}: {adaptive_IWLS_best_k}\n\n")
+	f.write('Adaptive IWLS Best Subset\n')
+	f.write(f"\ttop {k}: {adaptive_IWLS_best_k}\n\n")
   
 # Margin-based approach
 def obtain_param(X, y):
@@ -252,36 +302,36 @@ with open(out_file, 'a') as f:
  
 # Calculate the maximum possible NDCG and rbo score by shuffling the order
 def max_score(set_list, fixed_order_list):
-    # Generate all possible permutations of the set_list
-    all_permutations = permutations(set_list)
-    max_ndcg_score = 0
-    max_rbo_score = 0
-    
-    # Iterate over all permutations and calculate NDCG and rbo score for each
-    for permuted_set in all_permutations:
-        ndcg = ndcg_score([fixed_order_list], [list(permuted_set)])
-        rbo = RankingSimilarity(fixed_order_list, list(permuted_set)).rbo()
-        if ndcg > max_ndcg_score:
-            max_ndcg_score = ndcg
-        if rbo > max_rbo_score:
-            max_rbo_score = rbo
-    return max_ndcg_score, max_rbo_score
+	# Generate all possible permutations of the set_list
+	all_permutations = permutations(set_list)
+	max_ndcg_score = 0
+	max_rbo_score = 0
+	
+	# Iterate over all permutations and calculate NDCG and rbo score for each
+	for permuted_set in all_permutations:
+		ndcg = ndcg_score([fixed_order_list], [list(permuted_set)])
+		rbo = RankingSimilarity(fixed_order_list, list(permuted_set)).rbo()
+		if ndcg > max_ndcg_score:
+			max_ndcg_score = ndcg
+		if rbo > max_rbo_score:
+			max_rbo_score = rbo
+	return max_ndcg_score, max_rbo_score
 
 # Calculate the average possible NDCG and rbo score by shuffling the order
 def average_score(set_list, fixed_order_list):
-    # Generate all possible permutations of the set_list
-    all_permutations = permutations(set_list)
-    length = 0
-    avg_ndcg_score = 0
-    avg_rbo_score = 0
-    
-    # Iterate over all permutations and calculate NDCG and rbo score for each
-    for permuted_set in all_permutations:
-        avg_ndcg_score += ndcg_score([fixed_order_list], [list(permuted_set)])
-        avg_rbo_score += RankingSimilarity(fixed_order_list, list(permuted_set)).rbo()
-        length += 1
-    
-    return avg_ndcg_score/length, avg_rbo_score/length
+	# Generate all possible permutations of the set_list
+	all_permutations = permutations(set_list)
+	length = 0
+	avg_ndcg_score = 0
+	avg_rbo_score = 0
+	
+	# Iterate over all permutations and calculate NDCG and rbo score for each
+	for permuted_set in all_permutations:
+		avg_ndcg_score += ndcg_score([fixed_order_list], [list(permuted_set)])
+		avg_rbo_score += RankingSimilarity(fixed_order_list, list(permuted_set)).rbo()
+		length += 1
+	
+	return avg_ndcg_score/length, avg_rbo_score/length
 
 # Result
 with open(out_file, 'a') as f:
