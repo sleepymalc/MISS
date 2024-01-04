@@ -19,6 +19,7 @@ args = parser.parse_args()
 # general parameters
 n = args.n
 k = args.k
+job_n = args.job_n
 cov_str = args.cov_str
 target = args.target
 seed = args.seed
@@ -118,7 +119,7 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 		subset_combinations = combinations(range(X_train.shape[0]), subset_size)
 		combinations_list = list(combinations(range(X_train.shape[0]), subset_size))
   
-		scores = Parallel(n_jobs=50)(delayed(actual_effect)(X_train, y_train, x_test, subset_to_remove, original_score) for subset_to_remove in subset_combinations)
+		scores = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, subset_to_remove, original_score) for subset_to_remove in subset_combinations)
 		top_index = np.argmax(scores)
 
 		best_subset_fix_test[subset_size - 1] = combinations_list[top_index]
