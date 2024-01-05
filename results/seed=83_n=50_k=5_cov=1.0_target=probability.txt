@@ -1,0 +1,47 @@
+Best Subset
+	size 1: [16]
+	size 2: [ 1 16]
+	size 3: [ 1 16 40]
+	size 4: [ 1 16 19 40]
+	size 5: [ 1 16 19 40 49]
+
+IWLS Best Subset
+	top 10: [16  1 18  9 17 25 15 21 34  2]
+
+Adaptive IWLS Best Subset
+	top 5: [16  1 40 19 18]
+
+Margin-based Best Subset
+	positive group:	top 10: [40 48 28 31 49 39 44 25 46 33]
+	negative group:	top 10: [19  3 16  1  8  6  0 10  9 18]
+
+Margin-based v.s. IWLS-based
+-size=n/2
+	P Group	K: 0.04667 | P: 0.08787
+	N Group	K: 0.10667 | P: 0.19533
+-size=k
+	P Group	K: -0.20000 | P: -0.31661
+	N Group	K: 0.40000 | P: 0.73388
+-size=2k
+	P Group	K: -0.11111 | P: 0.05477
+	N Group	K: 0.06667 | P: 0.03235
+
+IWLS Best Subset v.s. Best Subset (size=k)
+	Actual rank: 226
+	max NDCG: 1.00000 | max rbo: 0.71333
+	avg NDCG: 0.87759 | avg rbo: 0.36000
+
+Adaptive IWLS Best Subset v.s. Best Subset (size=k)
+	Actual rank: 2
+	max NDCG: 1.00000 | max rbo: 0.96000
+	avg NDCG: 0.81199 | avg rbo: 0.56000
+
+Margin-based Best Subset v.s. Best Subset (size=k)
+P Group
+	Actual rank: 2118759
+	max NDCG: 1.00000 | max rbo: 0.49667
+	avg NDCG: 0.93611 | avg rbo: 0.24000
+N Group
+	Actual rank: 54815
+	max NDCG: 1.00000 | max rbo: 0.70333
+	avg NDCG: 0.79702 | avg rbo: 0.40000

@@ -104,6 +104,7 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
 	best_subset_fix_test = np.full((k), None)
 	best_reduced_Z_fix_test = np.full((k), None)
+	best_subset_combination = []
 
 	## Fixed test point
 	x_test = np.hstack((1, x_test))
@@ -120,12 +121,13 @@ def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, 
 		combinations_list = list(combinations(range(X_train.shape[0]), subset_size))
   
 		scores = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, subset_to_remove, original_score) for subset_to_remove in subset_combinations)
-		top_index = np.argmax(scores)
+	
+		sort_subset_combinations = np.array(combinations_list)[np.argsort(scores)[::-1]]
+		best_subset_combination.append(sort_subset_combinations)
+		best_subset_fix_test[subset_size - 1] = sort_subset_combinations[0]
+		best_reduced_Z_fix_test[subset_size - 1] = np.max(scores) # TODO likely is a bug
 
-		best_subset_fix_test[subset_size - 1] = combinations_list[top_index]
-		best_reduced_Z_fix_test[subset_size - 1] = scores[top_index] # TODO likely is a bug
-
-	return [best_subset_fix_test, best_reduced_Z_fix_test]
+	return [best_subset_combination, best_subset_fix_test, best_reduced_Z_fix_test]
 
 # def brute_force_removal(original_logistic_classifier, X_train, y_train, x_test, k=10, target=target):
 # 	# Initialize variables to keep track of the best subset and loss difference for parameter changes
@@ -198,13 +200,14 @@ def calculate_influence(X, x_test, y, coef, W, leverage=True, target=target):
 
 parameter = brute_force_removal(logistic_classifier, X_train, y_train, x_test, k)
 
-best_k_subset = parameter[0][-1]
+best_k_subset_combination = parameter[0][-1]
+best_k_subset = parameter[1][-1]
 
 # print ground truth
 with open(out_file, 'w') as f:
 	f.write('Best Subset\n')
 	for subset_size in range(1, k + 1):
-		f.write(f"\tsize {subset_size}: {parameter[0][subset_size-1]}\n")
+		f.write(f"\tsize {subset_size}: {parameter[1][subset_size-1]}\n")
 	f.write('\n')
 
 # Create the IWLS logistic regression model and fit it
@@ -334,6 +337,12 @@ def average_score(set_list, fixed_order_list):
 	
 	return avg_ndcg_score/length, avg_rbo_score/length
 
+# Given a subset and a subset rank list, calculate the actual rank of the subset
+def actual_rank(subset_rank_list, subset):
+    # sort the subset in ascending order
+    subset = np.sort(subset)
+    return np.where(np.all(subset_rank_list == subset, axis=1))[0][0]
+
 # Result
 with open(out_file, 'a') as f:
 	f.write('Margin-based v.s. IWLS-based\n')
@@ -346,28 +355,39 @@ with open(out_file, 'a') as f:
 	f.write(f'-size=2k\n')
 	f.write(f'\tP Group\tK: {stats.kendalltau(ind_p[:2*k], IWLS_best[:2*k]).statistic:.5f} | P: {stats.pearsonr(ind_p[:2*k], IWLS_best[:2*k]).statistic:.5f}\n')
 	f.write(f'\tN Group\tK: {stats.kendalltau(ind_n[:2*k], IWLS_best[:2*k]).statistic:.5f} | P: {stats.pearsonr(ind_n[:2*k], IWLS_best[:2*k]).statistic:.5f}\n\n')
+
   
 	f.write('IWLS Best Subset v.s. Best Subset (size=k)\n')
+	rank = actual_rank(best_k_subset_combination, IWLS_best[:k])
 	ndcg, rbo = max_score(best_k_subset, IWLS_best[:k])
+	f.write(f'\tActual rank: {rank}\n')
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, IWLS_best[:k])
 	f.write(f'\tavg NDCG: {ndcg:.5f} | avg rbo: {rbo:.5f}\n\n')
+
  
 	f.write('Adaptive IWLS Best Subset v.s. Best Subset (size=k)\n')
+	rank = actual_rank(best_k_subset_combination, adaptive_IWLS_best_k)
 	ndcg, rbo = max_score(best_k_subset, adaptive_IWLS_best_k)
+	f.write(f'\tActual rank: {rank}\n')
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, adaptive_IWLS_best_k)
 	f.write(f'\tavg NDCG: {ndcg:.5f} | avg rbo: {rbo:.5f}\n\n')
 
+
 	f.write('Margin-based Best Subset v.s. Best Subset (size=k)\n')
 	f.write(f'P Group\n')
+	rank = actual_rank(best_k_subset_combination, ind_p[:k])
 	ndcg, rbo = max_score(best_k_subset, ind_p[:k])
+	f.write(f'\tActual rank: {rank}\n')
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, ind_p[:k])
 	f.write(f'\tavg NDCG: {ndcg:.5f} | avg rbo: {rbo:.5f}\n')
  
 	f.write(f'N Group\n')
+	rank = actual_rank(best_k_subset_combination, ind_n[:k])
 	ndcg, rbo = max_score(best_k_subset, ind_n[:k])
+	f.write(f'\tActual rank: {rank}\n')
 	f.write(f'\tmax NDCG: {ndcg:.5f} | max rbo: {rbo:.5f}\n')
 	ndcg, rbo = average_score(best_k_subset, ind_n[:k])
 	f.write(f'\tavg NDCG: {ndcg:.5f} | avg rbo: {rbo:.5f}\n')
