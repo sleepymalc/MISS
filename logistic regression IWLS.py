@@ -40,9 +40,9 @@ y_train = np.hstack((y_n, y_p))
 
 # Choose mean_n or mean_p wp 1/2
 if np.random.rand() < 0.5:
-    x_test = np.random.multivariate_normal(mean_n, cov)
+	x_test = np.random.multivariate_normal(mean_n, cov)
 else:
-    x_test = np.random.multivariate_normal(mean_p, cov)
+	x_test = np.random.multivariate_normal(mean_p, cov)
 
 # Create a Logistic Regression classifier
 logistic_classifier = LogisticRegression(penalty=None)
@@ -260,9 +260,9 @@ with open(out_file, 'a') as f:
 
 # Given a subset and a subset rank list, calculate the actual rank of the subset
 def actual_rank(subset_rank_list, subset):
-    # sort the subset in ascending order
-    subset = np.sort(subset)
-    return np.where(np.all(subset_rank_list == subset, axis=1))[0][0]
+	# sort the subset in ascending order
+	subset = np.sort(subset)
+	return np.where(np.all(subset_rank_list == subset, axis=1))[0][0]
 
 # Result
 with open(out_file, 'a') as f:
