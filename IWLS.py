@@ -2,9 +2,10 @@ import argparse
 from joblib import Parallel, delayed
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import log_loss
 from itertools import combinations
 
-def actual_effect(X_train, y_train, x_test, subset_to_remove, original_score, target="probability"):
+def actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target="probability"):
 	# Create a new training set without the selected data points
 	reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
 	reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
@@ -19,14 +20,18 @@ def actual_effect(X_train, y_train, x_test, subset_to_remove, original_score, ta
 		reduced_score = np.dot(np.hstack((reduced_lr.intercept_, reduced_lr.coef_[0])), x_test)
 	elif target == "probability":
 		reduced_score = reduced_lr.predict_proba(x_test[1:].reshape(1, -1))[0][1]
-
+	elif target == "train loss":
+		reduced_score = -reduced_lr.score(reduced_X_train, reduced_y_train)
+	elif target == "test loss":
+		reduced_score = log_loss(y_test, reduced_lr.predict_proba(x_test[1:].reshape(1, -1))[0])
+  
 	# Calculate the difference in predicted probabilities
 	score_difference = reduced_score - original_score
 
 	return score_difference
 
-# TODO: Currently only use a specific k, not <= k
-def actual(X_train, y_train, x_test, k=10, job_n=50, target="probability"):
+# The actual effect of a specific k, not <= k
+def actual(X_train, y_train, x_test, y_test, k=10, job_n=50, target="probability"):
 	# Create a Logistic Regression classifier
 	original_lr = LogisticRegression(penalty=None).fit(X_train, y_train)
  
@@ -41,6 +46,10 @@ def actual(X_train, y_train, x_test, k=10, job_n=50, target="probability"):
 		original_score = np.dot(np.hstack((original_lr.intercept_, original_lr.coef_[0])), x_test)
 	elif target == "probability":
 		original_score = original_lr.predict_proba(x_test[1:].reshape(1, -1))[0][1]
+	elif target == "train loss":
+		original_score = -original_lr.score(X_train, y_train)
+	elif target == "test loss":
+		original_score = original_lr.predict(x_test[1:].reshape(1, -1))[0]
 
 	# Loop over different subset sizes from 1 to k
 	for subset_size in range(1, k + 1):
@@ -48,7 +57,7 @@ def actual(X_train, y_train, x_test, k=10, job_n=50, target="probability"):
 		subset_combinations = combinations(range(X_train.shape[0]), subset_size)
 		combinations_list = list(combinations(range(X_train.shape[0]), subset_size))
   
-		scores = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, subset_to_remove, original_score, target) for subset_to_remove in subset_combinations)
+		scores = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target) for subset_to_remove in subset_combinations)
 	
 		sort_subset_combinations = np.array(combinations_list)[np.argsort(scores)[::-1]]
 		best_subset_combination.append(sort_subset_combinations)
@@ -87,7 +96,7 @@ def logistic_regression_IWLS(X, y, max_iters=500, tolerance=1e-6):
 	
 	return coef, p
 
-def IWLS_influence(X, x_test, y, coef, W, leverage=True, target="probability"):
+def IWLS_influence(X, x_test, y, y_test, coef, W, target="probability"):
 	n = X.shape[0]
 	influences = np.zeros(n)
  
@@ -101,15 +110,17 @@ def IWLS_influence(X, x_test, y, coef, W, leverage=True, target="probability"):
 		sigma = sigmoid(np.dot(x_test, coef))
 		phi = (1 - sigma) * sigma * x_test
 		influences = np.dot(np.dot(phi, N_inv), X.T * r)
+	# elif target == "train loss":
+    
+    # elif target == "test loss":
 		
-	if leverage:
-		for i in range(n):
-			# Calculate the influence using the provided formula
-			influences[i] = influences[i] / (1 - W[i] * np.dot(np.dot(X[i], N_inv), X[i]))
+	for i in range(n):
+		# Adjust the final influence score by leverage scores
+		influences[i] = influences[i] / (1 - W[i] * np.dot(np.dot(X[i], N_inv), X[i]))
 
 	return influences
 
-def IWLS(X_train, y_train, x_test, target="probability"):
+def IWLS(X_train, y_train, x_test, y_test, target="probability"):
 	n = X_train.shape[0]
 	coefficients, p = logistic_regression_IWLS(X_train, y_train) # this might be avoided since all we need is a converged probability to construct W
 	W = p * (1 - p)
@@ -118,14 +129,14 @@ def IWLS(X_train, y_train, x_test, target="probability"):
 	y = np.dot(X_train_bar, coefficients) + (y_train - p) / W
 
 	# Calculate influences
-	influences = IWLS_influence(X_train_bar, x_test_bar, y, coefficients, W, target=target)
+	influences = IWLS_influence(X_train_bar, x_test_bar, y, y_test, coefficients, W, target=target)
 
 	IWLS_best = np.argsort(influences)[-n:][::-1]
  
 	return IWLS_best
 
 # Calculate adaptive influences
-def adaptive_IWLS(X_train, y_train, x_test, k=5, target="probability"):
+def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
 	n = X_train.shape[0]
 	coefficients, p = logistic_regression_IWLS(X_train, y_train)
 	coef = coefficients.copy()
@@ -141,7 +152,7 @@ def adaptive_IWLS(X_train, y_train, x_test, k=5, target="probability"):
 		X = X_train_bar_with_index[:, :-1] # without index
 		y = np.dot(X, coef) + (y_copy - p_copy) / W
 		# Calculate influences
-		influences = IWLS_influence(X, x_test_bar, y, coef, W)
+		influences = IWLS_influence(X, x_test_bar, y, y_test, coef, W, target=target)
   		
 		print_size = k * 2
 		top_indices = np.argsort(influences)[-(print_size):][::-1]
@@ -201,6 +212,9 @@ def first_order(X_train, y_train, x_test, y_test, target="probability"):
 		phi = 1
 	elif target == "probability":
 		phi = (1 - sigma_test) * sigma_test * x_test
+	# elif target == "train loss":
+    
+    # elif target == "test loss":
   
 	influences = - phi * grad_loss_test.T @ Hessian_inv @ grad_loss_train
 	FO_best = np.argsort(influences)[-n:][::-1]
@@ -231,7 +245,7 @@ if __name__ == '__main__':
 	
 	np.random.seed(seed)
 
-	out_file = f"results/s={seed}_n={n}_k={k}_cov={cov}_target={target}.txt"
+	out_file = f"results/target={target}/s={seed}_n={n}_k={k}_cov={cov}.txt"
 
 	# generate data
 	mean_n = np.array([-1, 0])
@@ -256,7 +270,7 @@ if __name__ == '__main__':
 	print_size = k * 2
 
 	# Best Subset
-	best_subset_combination, best_subset_fix_test = actual(X_train, y_train, x_test, k=k, job_n=job_n, target=target)
+	best_subset_combination, best_subset_fix_test = actual(X_train, y_train, x_test, y_test, k=k, job_n=job_n, target=target)
 	best_k_subset = best_subset_fix_test[-1]
 
 	with open(out_file, 'w') as f:
@@ -266,13 +280,13 @@ if __name__ == '__main__':
 		f.write('\n')
 
 	# IWLS
-	IWLS_best = IWLS(X_train, y_train, x_test, target=target)
+	IWLS_best = IWLS(X_train, y_train, x_test, y_test, target=target)
 	with open(out_file, 'a') as f:
 		f.write('IWLS Best Subset\n')
 		f.write(f"\ttop {print_size}: {IWLS_best[:print_size]}\n\n")
 	
 	# Adaptive IWLS
-	adaptive_IWLS_best_k = adaptive_IWLS(X_train, y_train, x_test, k=k, target=target)
+	adaptive_IWLS_best_k = adaptive_IWLS(X_train, y_train, x_test, y_test, k=k, target=target)
 	with open(out_file, 'a') as f:
 		f.write('Adaptive IWLS Best Subset\n')
 		f.write(f"\ttop {k}: {adaptive_IWLS_best_k}\n\n")
