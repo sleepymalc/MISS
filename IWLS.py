@@ -171,7 +171,7 @@ def margin(X_train, y_train):
 	param = np.concatenate(([lr.intercept_[0]], lr.coef_[0]))
 
 	X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
-	margin = (X_train_bar @ param) * y_train * (-1)
+	margin = (X_train_bar @ param) * (1 - 2 * y_train)
 
 	margin_n = margin[:int(n/2)]
 	margin_p = margin[int(n/2):]
@@ -186,20 +186,21 @@ def first_order(X_train, y_train, x_test, y_test, target="probability"):
 	n = X_train.shape[0]
 	lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 	# Compute the gradient of the logistic loss with respect to the parameters evaluated at training examples (dimension: d x n)
-	grad_loss_train = (lr.predict_proba(X_train)[:, 1] - y_train) * X_train.T
-	grad_loss_test = (lr.predict_proba(x_test.reshape(1, -1))[0][1] - y_test) * x_test
+	sigma_train = lr.predict_proba(X_train)[:, 1]
+	sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+	grad_loss_train = (sigma_train - y_train) * X_train.T
+	grad_loss_test = (sigma_test - y_test) * x_test
 
 	# Compute the Hessian w.r.t. the parameters
-	Hessian = np.dot(X_train.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train))
+	Hessian = np.dot(X_train.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train)) / n
 
 	# Compute the inverse of the Hessian
 	Hessian_inv = np.linalg.inv(Hessian)
- 
-	sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+	
 	if target == "linear":
 		phi = 1
 	elif target == "probability":
-		phi = (1 - sigma) * sigma * x_test
+		phi = (1 - sigma_test) * sigma_test * x_test
   
 	influences = - phi * grad_loss_test.T @ Hessian_inv @ grad_loss_train
 	FO_best = np.argsort(influences)[-n:][::-1]
@@ -215,7 +216,7 @@ if __name__ == '__main__':
 	parser.add_argument('--seed', type=int, default=20)
 	parser.add_argument('--n', type=int, default=50)
 	parser.add_argument('--k', type=int, default=2)
-	parser.add_argument('--cov_str', type=float, default=1)
+	parser.add_argument('--cov', type=float, default=1)
 	parser.add_argument('--job_n', type=int, default=50)
 	parser.add_argument('--target', type=str, default='probability')
 	args = parser.parse_args()
@@ -224,18 +225,18 @@ if __name__ == '__main__':
 	n = args.n
 	k = args.k
 	job_n = args.job_n
-	cov_str = args.cov_str
+	cov = args.cov
 	target = args.target
 	seed = args.seed
 	
 	np.random.seed(seed)
 
-	out_file = f"results/s={seed}_n={n}_k={k}_cov={cov_str}_target={target}.txt"
+	out_file = f"results/s={seed}_n={n}_k={k}_cov={cov}_target={target}.txt"
 
 	# generate data
 	mean_n = np.array([-1, 0])
 	mean_p = np.array([1, 0])
-	cov = np.eye(2) * cov_str  
+	cov = np.eye(2) * cov  
 	x_n = np.random.multivariate_normal(mean_n, cov, int(n/2))
 	x_p = np.random.multivariate_normal(mean_p, cov, int(n/2))
 
@@ -248,7 +249,7 @@ if __name__ == '__main__':
 	# Choose mean_n or mean_p wp 1/2
 	if np.random.rand() < 0.5:
 		x_test = np.random.multivariate_normal(mean_n, cov)
-		y_test = -1
+		y_test = 0
 	else:
 		x_test = np.random.multivariate_normal(mean_p, cov)
 		y_test = 1
@@ -277,7 +278,6 @@ if __name__ == '__main__':
 		f.write(f"\ttop {k}: {adaptive_IWLS_best_k}\n\n")
 
 	# Margin-based approach
-	y_train = np.hstack((-np.ones(int(n/2)), y_p))
 	ind_n, ind_p = margin(X_train, y_train)
 	with open(out_file, 'a') as f:
 		f.write('Margin-based Best Subset\n')
