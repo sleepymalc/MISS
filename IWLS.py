@@ -236,9 +236,9 @@ if __name__ == '__main__':
 	# generate data
 	mean_n = np.array([-1, 0])
 	mean_p = np.array([1, 0])
-	cov = np.eye(2) * cov  
-	x_n = np.random.multivariate_normal(mean_n, cov, int(n/2))
-	x_p = np.random.multivariate_normal(mean_p, cov, int(n/2))
+	covariance = np.eye(2) * cov  
+	x_n = np.random.multivariate_normal(mean_n, covariance, int(n/2))
+	x_p = np.random.multivariate_normal(mean_p, covariance, int(n/2))
 
 	y_n = np.zeros(int(n/2)) # 0 labels
 	y_p = np.ones(int(n/2))  # 1 labels
@@ -248,10 +248,10 @@ if __name__ == '__main__':
 
 	# Choose mean_n or mean_p wp 1/2
 	if np.random.rand() < 0.5:
-		x_test = np.random.multivariate_normal(mean_n, cov)
+		x_test = np.random.multivariate_normal(mean_n, covariance)
 		y_test = 0
 	else:
-		x_test = np.random.multivariate_normal(mean_p, cov)
+		x_test = np.random.multivariate_normal(mean_p, covariance)
 		y_test = 1
 	print_size = k * 2
 
