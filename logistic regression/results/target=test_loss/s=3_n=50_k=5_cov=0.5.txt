@@ -26,7 +26,7 @@ Adaptive IWLS Best Subset v.s. Best Subset (size=k)
 
 Margin-based Best Subset v.s. Best Subset (size=k)
 P Group
-	Actual rank: 2117926
+	Actual rank: 2114676
 N Group
 	Actual rank: 289
 

@@ -24,7 +24,7 @@ def actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_s
 
     return score_difference
 
-# The actual effect of a specific k, not <= k
+# TODO: The actual effect of a specific k, not <= k
 def actual(X_train, y_train, x_test, y_test, k=10, job_n=50, target="probability"):
     # Create a Logistic Regression classifier
     original_lr = LogisticRegression(penalty=None).fit(X_train, y_train)
@@ -50,13 +50,9 @@ def actual(X_train, y_train, x_test, y_test, k=10, job_n=50, target="probability
         
         sort_subset_combinations = np.array(combinations_list)[np.argsort(best_k_score)[::-1]]
         best_subset[subset_size - 1] = sort_subset_combinations[0]
-        score.append(best_k_score)
+        score.append(best_k_score) # TODO: Flatten this if we want to get <= k
 
     return [score, best_subset]
-
-# Create the IWLS logistic regression model and fit it
-def sigmoid(z):
-    return 1 / (1 + np.exp(-z))
 
 def WLS_influence(X, y, coef, W, phi, target="probability"):
     n = X.shape[0]
@@ -157,11 +153,15 @@ def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
         y_train = np.delete(y_train, top_indices[0], axis=0)
         
         
-        # # IWLS update
+        # # One step IWLS update
         # X_weighted = X.T * W
         # Hessian = np.dot(X_weighted, X)
         # gradient = np.dot(X.T, y_train - p)
         # coefficients += np.linalg.solve(Hessian, gradient)
+
+        # def sigmoid(z):
+        #     return 1 / (1 + np.exp(-z))
+        
         # p = sigmoid(np.dot(X, coefficients))
 
         # Train to full convergence
@@ -230,7 +230,7 @@ def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, targe
 
     actual_score = actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target=target)
 
-    # https://stackoverflow.com/questions/39059371/can-numpys-argsort-give-equal-element-the-same-rank
+    # tie-handling. ref: https://stackoverflow.com/questions/39059371/can-numpys-argsort-give-equal-element-the-same-rank
     def rankmin(x):
         u, inv, counts = np.unique(x, return_inverse=True, return_counts=True)
         csum = np.zeros_like(counts)
