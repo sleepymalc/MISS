@@ -31,4 +31,4 @@ N Group
 	Actual rank: 1497471
 
 First-order Best Subset v.s. Best Subset (size=k)
-	Actual rank: 2118676
+	Actual rank: 2118670
