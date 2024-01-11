@@ -6,20 +6,16 @@ from sklearn.metrics import log_loss
 from itertools import combinations
 
 def actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target="probability"):
-    # Create a new training set without the selected data points
+    # Train a Logistic Regression classifier on the reduced training set
     reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
     reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
-
-    # Train a Logistic Regression classifier on the reduced training set
-    reduced_lr = LogisticRegression(penalty=None)
-
-    reduced_lr.fit(reduced_X_train, reduced_y_train)
+    reduced_lr = LogisticRegression(penalty=None).fit(reduced_X_train, reduced_y_train)
 
     # Make inference
     if target == "probability":
         reduced_score = reduced_lr.predict_proba(x_test.reshape(1, -1))[0][1]
     elif target == "train_loss":
-        reduced_score = log_loss(reduced_y_train, reduced_lr.predict_proba(reduced_X_train))
+        reduced_score = log_loss(reduced_y_train, reduced_lr.predict_proba(reduced_X_train), labels=[0, 1])
     elif target == "test_loss":
         reduced_score = log_loss([y_test], reduced_lr.predict_proba(x_test.reshape(1, -1)), labels=[0, 1])
   
@@ -34,13 +30,13 @@ def actual(X_train, y_train, x_test, y_test, k=10, job_n=50, target="probability
     original_lr = LogisticRegression(penalty=None).fit(X_train, y_train)
  
     # Initialize variables to keep track of the best subset and loss difference for parameter changes
-    best_subset_fix_test = np.full((k), None)
-    best_subset_combination = []
+    best_subset = np.full((k), None)
+    score = []
     
     if target == "probability":
-        original_score = original_lr.predict_proba(x_test.reshape(1, -1))[0][1]
+        original_score = original_lr.predict_proba(x_test.reshape(1, -1))[0][1] # We're looking at the predicted probability of the positive class
     elif target == "train_loss":
-        original_score = log_loss(y_train, original_lr.predict_proba(X_train))
+        original_score = log_loss(y_train, original_lr.predict_proba(X_train), labels=[0, 1])
     elif target == "test_loss":
         original_score = log_loss([y_test], original_lr.predict_proba(x_test.reshape(1, -1)), labels=[0, 1])
 
@@ -49,14 +45,14 @@ def actual(X_train, y_train, x_test, y_test, k=10, job_n=50, target="probability
         # Generate all combinations of subsets of the current size
         subset_combinations = combinations(range(X_train.shape[0]), subset_size)
         combinations_list = list(combinations(range(X_train.shape[0]), subset_size))
-  
-        scores = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target) for subset_to_remove in subset_combinations)
-    
-        sort_subset_combinations = np.array(combinations_list)[np.argsort(scores)[::-1]]
-        best_subset_combination.append(sort_subset_combinations)
-        best_subset_fix_test[subset_size - 1] = sort_subset_combinations[0]
+        
+        best_k_score = Parallel(n_jobs=job_n)(delayed(actual_effect)(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target) for subset_to_remove in subset_combinations)
+        
+        sort_subset_combinations = np.array(combinations_list)[np.argsort(best_k_score)[::-1]]
+        best_subset[subset_size - 1] = sort_subset_combinations[0]
+        score.append(best_k_score)
 
-    return [best_subset_combination, best_subset_fix_test]
+    return [score, best_subset]
 
 # Create the IWLS logistic regression model and fit it
 def sigmoid(z):
@@ -195,8 +191,9 @@ def margin(X_train, y_train):
 def first_order(X_train, y_train, x_test, y_test, target="probability"):
     n = X_train.shape[0]
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
-    # Compute the gradient of the logistic loss with respect to the parameters evaluated at training examples (dimension: d x n)
-    sigma_train = lr.predict_proba(X_train)[:, 1]
+
+    # Compute the gradient of the logistic loss w.r.t. the parameters
+    sigma_train = lr.predict_proba(X_train)[:, 1] # P(1 | x)
     sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
     grad_loss_train = (sigma_train - y_train) * X_train.T
     grad_loss_test = (sigma_test - y_test) * x_test
@@ -221,9 +218,27 @@ def first_order(X_train, y_train, x_test, y_test, target="probability"):
     return FO_best
 
 # Result
-def actual_rank(subset_rank_list, subset):
-    subset = np.sort(subset) # sort the subset in ascending order
-    return np.where(np.all(subset_rank_list == subset, axis=1))[0][0] + 1
+def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, target="probability"):
+    original_lr = LogisticRegression(penalty=None).fit(X_train, y_train)
+
+    if target == "probability":
+            original_score = original_lr.predict_proba(x_test.reshape(1, -1))[0][1] # We're looking at the predicted probability of the positive class
+    elif target == "train_loss":
+        original_score = log_loss(y_train, original_lr.predict_proba(X_train), labels=[0, 1])
+    elif target == "test_loss":
+        original_score = log_loss([y_test], original_lr.predict_proba(x_test.reshape(1, -1)), labels=[0, 1])
+
+    actual_score = actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target=target)
+
+    # https://stackoverflow.com/questions/39059371/can-numpys-argsort-give-equal-element-the-same-rank
+    def rankmin(x):
+        u, inv, counts = np.unique(x, return_inverse=True, return_counts=True)
+        csum = np.zeros_like(counts)
+        csum[1:] = counts[:-1].cumsum()
+        return csum[inv]+1
+    
+    score_rank = rankmin(-1 * np.array(score))
+    return score_rank[np.where(score == actual_score)[0][0]]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -267,16 +282,17 @@ if __name__ == '__main__':
     else:
         x_test = np.random.multivariate_normal(mean_p, covariance)
         y_test = 1
+
     print_size = k * 2
 
     # Best Subset
-    best_subset_combination, best_subset_fix_test = actual(X_train, y_train, x_test, y_test, k=k, job_n=job_n, target=target)
-    best_k_subset = best_subset_fix_test[-1]
+    score, best_subset = actual(X_train, y_train, x_test, y_test, k=k, job_n=job_n, target=target)
+    best_k_score = score[-1]
 
     with open(out_file, 'w') as f:
         f.write('Best Subset\n')
         for subset_size in range(1, k + 1):
-            f.write(f"\tsize {subset_size}: {best_subset_fix_test[subset_size-1]}\n")
+            f.write(f"\tsize {subset_size}: {best_subset[subset_size-1]}\n")
         f.write('\n')
 
     # IWLS
@@ -303,29 +319,27 @@ if __name__ == '__main__':
     with open(out_file, 'a') as f:
         f.write('First-order Best Subset\n')
         f.write(f"\ttop {print_size}: {FO_best[:print_size]}\n\n")
-    
-    best_k_subset_combination = best_subset_combination[-1]
 
     with open(out_file, 'a') as f:
         f.write('IWLS Best Subset v.s. Best Subset (size=k)\n')
-        rank = actual_rank(best_k_subset_combination, IWLS_best[:k])
+        rank = actual_rank(X_train, y_train, x_test, y_test, IWLS_best[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
 
     
         f.write('Adaptive IWLS Best Subset v.s. Best Subset (size=k)\n')
-        rank = actual_rank(best_k_subset_combination, adaptive_IWLS_best_k)
+        rank = actual_rank(X_train, y_train, x_test, y_test, adaptive_IWLS_best_k, best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
 
 
         f.write('Margin-based Best Subset v.s. Best Subset (size=k)\n')
         f.write(f'P Group\n')
-        rank = actual_rank(best_k_subset_combination, ind_p[:k])
+        rank = actual_rank(X_train, y_train, x_test, y_test, ind_p[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n')
     
         f.write(f'N Group\n')
-        rank = actual_rank(best_k_subset_combination, ind_n[:k])
+        rank = actual_rank(X_train, y_train, x_test, y_test, ind_n[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
         
         f.write('First-order Best Subset v.s. Best Subset (size=k)\n')
-        rank = actual_rank(best_k_subset_combination, FO_best[:k])
+        rank = actual_rank(X_train, y_train, x_test, y_test, FO_best[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n')

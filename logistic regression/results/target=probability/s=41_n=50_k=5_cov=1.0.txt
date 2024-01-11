@@ -9,7 +9,7 @@ IWLS Best Subset
 	top 10: [12 17 14 23  9 15 22  2  1 13]
 
 Adaptive IWLS Best Subset
-	top 5: [12 17 14  2  9]
+	top 5: [12 14 17  2  9]
 
 Margin-based Best Subset
 	positive group:	top 10: [29 43 32 42 39 28 49 47 44 38]
