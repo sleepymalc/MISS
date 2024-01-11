@@ -1,0 +1,34 @@
+Best Subset
+	size 1: [25]
+	size 2: [25 47]
+	size 3: [24 25 47]
+	size 4: [21 24 25 47]
+	size 5: [21 24 25 35 47]
+
+IWLS Best Subset
+	top 10: [33 40 49 30 46 42 34 44 36 43]
+
+Adaptive IWLS Best Subset
+	top 5: [33 31 16 32 40]
+
+Margin-based Best Subset
+	positive group:	top 10: [33 40 49 34 46 42 30 44 36 43]
+	negative group:	top 10: [ 8 11 20  5 16 22  0  6 14  3]
+
+First-order Best Subset
+	top 10: [21 47  4 10 24 25 48 31  2 35]
+
+IWLS Best Subset v.s. Best Subset (size=k)
+	Actual rank: 2118715
+
+Adaptive IWLS Best Subset v.s. Best Subset (size=k)
+	Actual rank: 2106860
+
+Margin-based Best Subset v.s. Best Subset (size=k)
+P Group
+	Actual rank: 2118720
+N Group
+	Actual rank: 2113687
+
+First-order Best Subset v.s. Best Subset (size=k)
+	Actual rank: 353
