@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-# Margin-based approach
 def margin(X_train, y_train):
     n = X_train.shape[0]
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)

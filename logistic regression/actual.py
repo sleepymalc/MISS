@@ -4,7 +4,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 from itertools import combinations
 
-
 def actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_score, target="probability"):
     reduced_X_train = np.delete(X_train, subset_to_remove, axis=0)
     reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)

@@ -51,7 +51,7 @@ def IWLS(X_train, y_train, x_test, y_test, target="probability"):
  
     return IWLS_best
 
-# Calculate adaptive influences TODO: Currently the edge case (when k ~= n) is not handled
+# TODO: Currently the edge case (when k ~= n) is not handled
 def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
     n = X_train.shape[0]
     

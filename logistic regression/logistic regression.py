@@ -6,7 +6,6 @@ from IWLS import IWLS, adaptive_IWLS
 from first_order import first_order
 from margin import margin
 
-# Result
 def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, target="probability"):
     original_lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 

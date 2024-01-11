@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
-# First-order method
 def first_order(X_train, y_train, x_test, y_test, target="probability"):
     n = X_train.shape[0]
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
