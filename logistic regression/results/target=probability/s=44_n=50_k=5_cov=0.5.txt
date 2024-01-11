@@ -28,7 +28,7 @@ Margin-based Best Subset v.s. Best Subset (size=k)
 P Group
 	Actual rank: 2117592
 N Group
-	Actual rank: 2117804
+	Actual rank: 2117594
 
 First-order Best Subset v.s. Best Subset (size=k)
 	Actual rank: 1703859
