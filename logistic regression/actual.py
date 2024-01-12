@@ -8,11 +8,14 @@ def actual_effect(X_train, y_train, X_test, y_test, subset_to_remove, original_v
     reduced_y_train = np.delete(y_train, subset_to_remove, axis=0)
     reduced_value = target_value(reduced_X_train, reduced_y_train, X_test, y_test, target)
 
-    score = reduced_value - original_value
+    if target == "avg_abs_test_loss":
+        score = np.mean(np.abs(original_value - reduced_value))
+    else:
+        score = reduced_value - original_value
 
     return score
 
-def actual(X_train, y_train, X_test, y_test, k=10, job_n=50, target="probability"):
+def actual(X_train, y_train, X_test, y_test, k=5, job_n=50, target="probability"):
     best_subset = np.full((k), None)
     score = []
     original_value = target_value(X_train, y_train, X_test, y_test, target=target)

@@ -10,21 +10,17 @@ def WLS_influence(X, y, coef, W, phi, target="probability"):
     param_influence = N_inv @ X.T * r
 
     influence = target_influence(phi, param_influence, target=target)
-
     influence = influence / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T)) # adjust by leverage score
     
     return influence
 
 def IWLS(X_train, y_train, X_test, y_test, target="probability"):
     n = X_train.shape[0]
-
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
     coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
     p = lr.predict_proba(X_train)[:, 1]
-    
     W = p * (1 - p)
     
-    # Calculate phi
     phi = target_phi(X_train, y_train, X_test, y_test, target=target)
 
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
@@ -39,7 +35,6 @@ def IWLS(X_train, y_train, X_test, y_test, target="probability"):
 # TODO: Currently the edge case (when k ~= n) is not handled
 def adaptive_IWLS(X_train, y_train, X_test, y_test, k=5, target="probability"):
     n = X_train.shape[0]
-    
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
     coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
     p = lr.predict_proba(X_train)[:, 1]

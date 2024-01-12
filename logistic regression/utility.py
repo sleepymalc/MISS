@@ -37,7 +37,6 @@ def data_generation(n, cov, target="probability"):
 
 def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, target="probability"):
     original_value = target_value(X_train, y_train, x_test, y_test, target=target)
-
     actual_score = actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_value, target=target)
 
     # tie-handling. ref: https://stackoverflow.com/questions/39059371/can-numpys-argsort-give-equal-element-the-same-rank

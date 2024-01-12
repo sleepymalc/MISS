@@ -12,8 +12,7 @@ def target_value(X_train, y_train, X_test, y_test, target="probability"):
     elif target == "avg_train_loss":
         value = log_loss(y_train, lr.predict_proba(X_train), labels=[0, 1])
     elif target == "avg_abs_test_loss":
-        log_losses = [log_loss([y_true], [y_pred_prob], labels=[0, 1]) for y_true, y_pred_prob in zip(y_test, lr.predict_proba(X_test))]
-        value = np.mean(np.abs(log_losses))
+        value = np.array([log_loss([y_true], [y_pred_prob], labels=[0, 1]) for y_true, y_pred_prob in zip(y_test, lr.predict_proba(X_test))]) # Due to this special target, we return the list of every individual test loss instead of an aggregated average test loss
 
     return value
 
@@ -35,16 +34,16 @@ def target_phi(X_train, y_train, X_test, y_test, target="probability"):
     elif target == "avg_abs_test_loss":
         X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
         sigma_test = lr.predict_proba(X_test)[:, 1]
-        log_losses = [log_loss([y_true], [y_pred_prob], labels=[0, 1]) for y_true, y_pred_prob in zip(y_test, lr.predict_proba(X_test))]
-        phi = (np.sign(log_losses) * (sigma_test - y_test) * X_test_bar.T).T
+        phi = ((sigma_test - y_test) * X_test_bar.T).T
 
     return phi
 
 def target_influence(phi, param_influence, target="probability"):
     if target in ["probability", "test_loss"]:
         influence = (phi @ param_influence).reshape(-1)
-    elif target in ["avg_train_loss", "avg_abs_test_loss"]:
+    elif target == "avg_train_loss":
         influence = np.sum(phi @ param_influence, axis=0)
+    elif target == "avg_abs_test_loss":
+        influence = np.sum(np.abs(phi @ param_influence), axis=0)
     
     return influence
-    

@@ -7,6 +7,7 @@ def first_order(X_train, y_train, X_test, y_test, target="probability"):
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
+    
     # Compute the Hessian w.r.t. the parameters
     Hessian = np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n
 
