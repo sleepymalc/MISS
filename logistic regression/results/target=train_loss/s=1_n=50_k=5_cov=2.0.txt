@@ -16,7 +16,7 @@ Margin-based Best Subset
 	negative group:	top 10: [19  3  0 11 23  7  5 12 24  9]
 
 First-order Best Subset
-	top 10: [ 3  5  0  7 30  2 12 49 43 38]
+	top 10: [37 23 46 35 26 40 25 21 48 31]
 
 IWLS Best Subset v.s. Best Subset (size=k)
 	Actual rank: 2118356
@@ -31,4 +31,4 @@ N Group
 	Actual rank: 2118608
 
 First-order Best Subset v.s. Best Subset (size=k)
-	Actual rank: 2098612
+	Actual rank: 2118356
