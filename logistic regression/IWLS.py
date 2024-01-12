@@ -15,7 +15,7 @@ def WLS_influence(X, y, coef, W, phi, target="probability"):
     
     return influence
 
-def IWLS(X_train, y_train, x_test, y_test, target="probability"):
+def IWLS(X_train, y_train, X_test, y_test, target="probability"):
     n = X_train.shape[0]
 
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
@@ -25,19 +25,19 @@ def IWLS(X_train, y_train, x_test, y_test, target="probability"):
     W = p * (1 - p)
     
     # Calculate phi
-    phi = target_phi(X_train, y_train, x_test, y_test, target=target)
+    phi = target_phi(X_train, y_train, X_test, y_test, target=target)
 
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
     y = np.dot(X_train_bar, coefficients) + (y_train - p) / W
 
-    influences = WLS_influence(X_train_bar, y, coefficients, W, phi, target=target)  
+    influence = WLS_influence(X_train_bar, y, coefficients, W, phi, target=target)  
 
-    IWLS_best = np.argsort(influences)[-n:][::-1]
+    IWLS_best = np.argsort(influence)[-n:][::-1]
  
     return IWLS_best
 
 # TODO: Currently the edge case (when k ~= n) is not handled
-def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
+def adaptive_IWLS(X_train, y_train, X_test, y_test, k=5, target="probability"):
     n = X_train.shape[0]
     
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
@@ -55,12 +55,12 @@ def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
         y = np.dot(X, coefficients) + (y_train - p) / W
         
         # Calculate phi adaptively
-        phi = target_phi(X_train, y_train, x_test, y_test, target=target)
+        phi = target_phi(X_train, y_train, X_test, y_test, target=target)
 
-        influences = WLS_influence(X, y, coefficients, W, phi, target=target)
+        influence = WLS_influence(X, y, coefficients, W, phi, target=target)
           
         print_size = k * 2
-        top_indices = np.argsort(influences)[-(print_size):][::-1]
+        top_indices = np.argsort(influence)[-(print_size):][::-1]
         
         actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
         adaptive_IWLS_best_k[i] = actual_top_indices[0]

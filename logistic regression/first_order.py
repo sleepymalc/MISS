@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from target import target_phi, target_influence
 
-def first_order(X_train, y_train, x_test, y_test, target="probability"):
+def first_order(X_train, y_train, X_test, y_test, target="probability"):
     n = X_train.shape[0]
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
@@ -17,8 +17,8 @@ def first_order(X_train, y_train, x_test, y_test, target="probability"):
     grad_loss_train = (sigma_train - y_train) * X_train_bar.T
     param_influence = Hessian_inv @ grad_loss_train / n
 
-    phi = target_phi(X_train, y_train, x_test, y_test, target=target)
-
+    phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+    
     influence = target_influence(phi, param_influence, target=target)
   
     FO_best = np.argsort(influence)[-n:][::-1]

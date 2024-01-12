@@ -2,45 +2,49 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import log_loss
 
-def target_value(X_train, y_train, x_test, y_test, target="probability"):
+def target_value(X_train, y_train, X_test, y_test, target="probability"):
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
     if target == "probability":
-        value = lr.predict_proba(x_test.reshape(1, -1))[0][1] # The predicted probability of the positive class
-    elif target == "train_loss":
-        value = log_loss(y_train, lr.predict_proba(X_train), labels=[0, 1])
+        value = lr.predict_proba(X_test)[0][1] # The predicted probability of the positive class
     elif target == "test_loss":
-        value = log_loss([y_test], lr.predict_proba(x_test.reshape(1, -1)), labels=[0, 1])
+        value = log_loss(y_test, lr.predict_proba(X_test), labels=[0, 1])
+    elif target == "avg_train_loss":
+        value = log_loss(y_train, lr.predict_proba(X_train), labels=[0, 1])
+    elif target == "avg_abs_test_loss":
+        log_losses = [log_loss([y_true], [y_pred_prob], labels=[0, 1]) for y_true, y_pred_prob in zip(y_test, lr.predict_proba(X_test))]
+        value = np.mean(np.abs(log_losses))
 
     return value
 
-def target_phi(X_train, y_train, x_test, y_test, target="probability"):
+def target_phi(X_train, y_train, X_test, y_test, target="probability"):
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
-    X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
-    x_test_bar = np.hstack((1, x_test))
-
     if target == "probability":
-        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        phi = (1 - sigma_test) * sigma_test * x_test_bar
-    elif target == "train_loss":
-        sigma_train = lr.predict_proba(X_train)[:, 1]
-        grad_loss_train = (sigma_train - y_train) * X_train_bar.T
-        phi = grad_loss_train.T
+        X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
+        sigma_test = lr.predict_proba(X_test)[0][1]
+        phi = (1 - sigma_test) * sigma_test * X_test_bar
     elif target == "test_loss":
-        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        grad_loss_test = (sigma_test - y_test) * x_test_bar
-        phi = grad_loss_test.T
+        X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
+        sigma_test = lr.predict_proba(X_test)[0][1]
+        phi = (sigma_test - y_test) * X_test_bar
+    elif target == "avg_train_loss":
+        X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
+        sigma_train = lr.predict_proba(X_train)[:, 1]
+        phi = ((sigma_train - y_train) * X_train_bar.T).T
+    elif target == "avg_abs_test_loss":
+        X_test_bar = np.hstack((np.ones((X_test.shape[0], 1)), X_test))
+        sigma_test = lr.predict_proba(X_test)[:, 1]
+        log_losses = [log_loss([y_true], [y_pred_prob], labels=[0, 1]) for y_true, y_pred_prob in zip(y_test, lr.predict_proba(X_test))]
+        phi = (np.sign(log_losses) * (sigma_test - y_test) * X_test_bar.T).T
 
     return phi
 
 def target_influence(phi, param_influence, target="probability"):
-    if target == "probability":
-        influence = phi @ param_influence
-    elif target == "train_loss":
+    if target in ["probability", "test_loss"]:
+        influence = (phi @ param_influence).reshape(-1)
+    elif target in ["avg_train_loss", "avg_abs_test_loss"]:
         influence = np.sum(phi @ param_influence, axis=0)
-    elif target == "test_loss":
-        influence = phi @ param_influence
     
     return influence
     
