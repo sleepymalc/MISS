@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from utility import target_phi, target_influence
 
 def first_order(X_train, y_train, x_test, y_test, target="probability"):
     n = X_train.shape[0]
@@ -15,17 +16,11 @@ def first_order(X_train, y_train, x_test, y_test, target="probability"):
     Hessian = np.dot(X_train.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train)) / n
 
     Hessian_inv = np.linalg.inv(Hessian)
-    param_influences = Hessian_inv @ grad_loss_train
- 
-    if target == "probability":
-        phi = (1 - sigma_test) * sigma_test * x_test * grad_loss_test.T
-        influences = - phi @ param_influences
-    elif target == "train_loss":
-        phi = grad_loss_train.T
-        influences = - np.sum(phi @ param_influences, axis=0)
-    elif target == "test_loss":
-        phi = grad_loss_test.T
-        influences = - phi @ param_influences
+    param_influence = Hessian_inv @ grad_loss_train / n
+    phi = target_phi(X_train, y_train, x_test, y_test, target)
+
+    influence = target_influence(phi, param_influence, target=target)
   
-    FO_best = np.argsort(influences)[-n:][::-1]
+    FO_best = np.argsort(influence)[-n:][::-1]
+
     return FO_best

@@ -1,24 +1,21 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
+from target import target_phi, target_influence
 
 def WLS_influence(X, y, coef, W, phi, target="probability"):
     n = X.shape[0]
-    influences = np.zeros(n)
  
     N = np.dot(W * X.T, X)
     N_inv = np.linalg.inv(N)
     r = W * (np.dot(X, coef) - y)
     
-    param_influences = N_inv @ X.T * r
+    param_influence = N_inv @ X.T * r
 
-    if target == "probability":
-        influences = (phi @ param_influences) / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T))    
-    elif target == "train_loss":
-        influences = np.sum((phi @ param_influences) / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T)), axis=0)
-    elif target == "test_loss":
-        influences = (phi @ param_influences) / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T))
+    influence = target_influence(phi, param_influence)
+
+    influence = influence / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T)) # adjust by leverage score
     
-    return influences
+    return influence
 
 def IWLS(X_train, y_train, x_test, y_test, target="probability"):
     n = X_train.shape[0]
@@ -28,22 +25,12 @@ def IWLS(X_train, y_train, x_test, y_test, target="probability"):
     p = lr.predict_proba(X_train)[:, 1]
     
     W = p * (1 - p)
-    X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
-    x_test_bar = np.hstack((1, x_test))
-    y = np.dot(X_train_bar, coefficients) + (y_train - p) / W
     
     # Calculate phi
-    if target == "probability":
-        sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        phi = (1 - sigma) * sigma * x_test_bar
-    elif target == "train_loss":
-        sigma_train = lr.predict_proba(X_train)[:, 1]
-        grad_loss_train = (sigma_train - y_train) * X_train_bar.T
-        phi = grad_loss_train.T
-    elif target == "test_loss":
-        sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        grad_loss_test = (sigma - y_test) * x_test_bar
-        phi = grad_loss_test.T
+    phi = target_phi(X_train, y_train, x_test, y_test, target=target)
+
+    X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
+    y = np.dot(X_train_bar, coefficients) + (y_train - p) / W
 
     influences = WLS_influence(X_train_bar, y, coefficients, W, phi, target=target)  
 
@@ -60,7 +47,6 @@ def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
     p = lr.predict_proba(X_train)[:, 1]
 
     X_train_bar = np.hstack((np.ones((n, 1)), X_train))
-    x_test_bar = np.hstack((1, x_test))
     X_train_bar_with_index = np.hstack((X_train_bar, np.arange(n).reshape(-1, 1)))
     adaptive_IWLS_best_k = np.zeros(k, dtype=int)
 
@@ -71,19 +57,8 @@ def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
         y = np.dot(X, coefficients) + (y_train - p) / W
         
         # Calculate phi adaptively
-        if target == "probability":
-            sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-            phi = (1 - sigma) * sigma * x_test_bar
-        elif target == "train_loss":
-            sigma_train = lr.predict_proba(X_train)[:, 1]
-            grad_loss_train = (sigma_train - y_train) * X_train_bar.T
-            phi = grad_loss_train.T
-        elif target == "test_loss":
-            sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-            grad_loss_test = (sigma - y_test) * x_test_bar
-            phi = grad_loss_test.T
-            
-        # Calculate influences
+        phi = target_phi(X_train, y_train, x_test, y_test, target=target)
+
         influences = WLS_influence(X, y, coefficients, W, phi, target=target)
           
         print_size = k * 2
