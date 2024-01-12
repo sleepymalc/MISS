@@ -88,4 +88,5 @@ def adaptive_IWLS(X_train, y_train, x_test, y_test, k=5, target="probability"):
         lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)
         coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
         p = lr.predict_proba(X_train)[:, 1]
+
     return adaptive_IWLS_best_k
