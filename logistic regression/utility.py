@@ -2,7 +2,6 @@ import numpy as np
 from target import target_value
 from actual import actual_effect
 
-
 def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, target="probability"):
     original_value = target_value(X_train, y_train, x_test, y_test, target=target)
 

@@ -4,6 +4,7 @@ from actual import actual
 from IWLS import IWLS, adaptive_IWLS
 from first_order import first_order
 from margin import margin
+from utility import actual_rank
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -3,15 +3,13 @@ from sklearn.linear_model import LogisticRegression
 from target import target_phi, target_influence
 
 def WLS_influence(X, y, coef, W, phi, target="probability"):
-    n = X.shape[0]
- 
     N = np.dot(W * X.T, X)
     N_inv = np.linalg.inv(N)
     r = W * (np.dot(X, coef) - y)
     
     param_influence = N_inv @ X.T * r
 
-    influence = target_influence(phi, param_influence)
+    influence = target_influence(phi, param_influence, target=target)
 
     influence = influence / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T)) # adjust by leverage score
     
