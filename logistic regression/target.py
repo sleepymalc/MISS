@@ -21,15 +21,15 @@ def target_phi(X_train, y_train, x_test, y_test, target="probability"):
     x_test_bar = np.hstack((1, x_test))
 
     if target == "probability":
-        sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        phi = (1 - sigma) * sigma * x_test_bar
+        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+        phi = (1 - sigma_test) * sigma_test * x_test_bar
     elif target == "train_loss":
         sigma_train = lr.predict_proba(X_train)[:, 1]
         grad_loss_train = (sigma_train - y_train) * X_train_bar.T
         phi = grad_loss_train.T
     elif target == "test_loss":
-        sigma = lr.predict_proba(x_test.reshape(1, -1))[0][1]
-        grad_loss_test = (sigma - y_test) * x_test_bar
+        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+        grad_loss_test = (sigma_test - y_test) * x_test_bar
         phi = grad_loss_test.T
 
     return phi
