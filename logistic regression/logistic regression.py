@@ -1,20 +1,12 @@
-import argparse
 import numpy as np
 from actual import actual
 from IWLS import IWLS, adaptive_IWLS
 from first_order import first_order
 from margin import margin
-from utility import data_generation, actual_rank
+from utility import data_generation, actual_rank, get_args
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=20)
-    parser.add_argument('--n', type=int, default=50)
-    parser.add_argument('--k', type=int, default=2)
-    parser.add_argument('--cov', type=float, default=1)
-    parser.add_argument('--job_n', type=int, default=50)
-    parser.add_argument('--target', type=str, default='probability')
-    args = parser.parse_args()
+    args = get_args()
 
     # general parameters
     n = args.n

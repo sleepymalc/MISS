@@ -1,6 +1,19 @@
+import argparse
 import numpy as np
 from target import target_value
 from actual import actual_effect
+
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--seed', type=int, default=20)
+    parser.add_argument('--n', type=int, default=50)
+    parser.add_argument('--k', type=int, default=2)
+    parser.add_argument('--cov', type=float, default=1)
+    parser.add_argument('--job_n', type=int, default=50)
+    parser.add_argument('--target', type=str, default='probability')
+    args = parser.parse_args()
+    
+    return args
 
 def data_generation(n, cov, target="probability"):
     # generate data
