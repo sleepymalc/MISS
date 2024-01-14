@@ -1,4 +1,8 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import numpy as np
+
 from actual import actual
 from IWLS import IWLS, adaptive_IWLS
 from first_order import first_order
@@ -21,7 +25,7 @@ if __name__ == '__main__':
     out_file = f"results/target={target}/s={seed}_n={n}_k={k}_cov={cov}.txt"
     
     X_train, y_train, X_test, y_test = data_generation(n, cov, target=target)
-
+    
     print_size = k * 2
 
     # Best Subset

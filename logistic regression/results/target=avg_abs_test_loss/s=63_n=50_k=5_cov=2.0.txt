@@ -1,0 +1,20 @@
+Best Subset
+	size 1: [18]
+	size 2: [18 24]
+	size 3: [18 35 49]
+	size 4: [12 18 22 24]
+	size 5: [ 6 12 18 22 24]
+
+IWLS Best Subset
+	top 10: [18 35 22 44 49 24 39 12 23  6]
+
+Adaptive IWLS Best Subset
+	top 5: [18 35 49 24 23]
+
+Margin-based Best Subset
+	positive group:	top 10: [35 39 44 29 49 47 34 38 37 32]
+	negative group:	top 10: [18 24 22 12  6 10 21  9 11 23]
+
+First-order Best Subset
+	top 10: [18 35 22 44 49 24 39 12  6 29]
+
