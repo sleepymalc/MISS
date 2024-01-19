@@ -15,7 +15,9 @@ def get_args():
     
     return args
 
-def data_generation(n, cov, target="probability"):
+def data_generation(n, cov, seed, target="probability"):
+    np.random.seed(seed)
+    
     # generate data
     mean_n = np.array([-1, 0])
     mean_p = np.array([1, 0])
