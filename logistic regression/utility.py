@@ -29,7 +29,7 @@ def data_generation(n, cov, target="probability"):
     X_train = np.vstack((x_n, x_p))
     y_train = np.hstack((y_n, y_p))
 
-    if target in ["probability", "test_loss"]: # only one test point    
+    if target in ["probability", "abs_probability", "test_loss", "abs_test_loss"]: # only one test point    
         # Choose mean_n or mean_p wp 1/2
         if np.random.rand() < 0.5:
             X_test = np.random.multivariate_normal(mean_n, covariance, 1)
@@ -37,7 +37,7 @@ def data_generation(n, cov, target="probability"):
         else:
             X_test = np.random.multivariate_normal(mean_p, covariance, 1)
             y_test = np.ones(1)
-    elif target in ["avg_abs_test_loss"]: # n test points
+    elif target in ["avg_abs_test_loss", "abs_avg_test_loss"]: # n test points
         x_n = np.random.multivariate_normal(mean_n, covariance, int(n/2))
         x_p = np.random.multivariate_normal(mean_p, covariance, int(n/2))
         X_test = np.vstack((x_n, x_p))
