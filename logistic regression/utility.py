@@ -5,8 +5,9 @@ from actual import actual_effect
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=20)
+    parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--n', type=int, default=50)
+    parser.add_argument('--d', type=int, default=2)
     parser.add_argument('--k', type=int, default=2)
     parser.add_argument('--cov', type=float, default=1)
     parser.add_argument('--job_n', type=int, default=50)
@@ -15,13 +16,17 @@ def get_args():
     
     return args
 
-def data_generation(n, cov, seed, target="probability"):
+def data_generation(n, d, cov, seed, target="probability"):
     np.random.seed(seed)
     
-    # generate data
-    mean_n = np.array([-1, 0])
-    mean_p = np.array([1, 0])
-    covariance = np.eye(2) * cov  
+    # generate d-dimensional data
+    mean_n = np.zeros(d)
+    mean_n[0] = -1
+
+    mean_p = np.zeros(d)
+    mean_p[0] = 1
+    
+    covariance = np.eye(d) * cov
     x_n = np.random.multivariate_normal(mean_n, covariance, int(n/2))
     x_p = np.random.multivariate_normal(mean_p, covariance, int(n/2))
 
