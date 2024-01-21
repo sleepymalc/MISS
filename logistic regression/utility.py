@@ -5,13 +5,13 @@ from actual import actual_effect
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seed', type=int, default=1)
-    parser.add_argument('--n', type=int, default=50)
-    parser.add_argument('--d', type=int, default=2)
-    parser.add_argument('--k', type=int, default=2)
-    parser.add_argument('--cov', type=float, default=1)
-    parser.add_argument('--job_n', type=int, default=50)
-    parser.add_argument('--target', type=str, default='probability')
+    parser.add_argument('--seed', type=int, default=1, help='random seed')
+    parser.add_argument('--n', type=int, default=50, help='number of training/testing points')
+    parser.add_argument('--d', type=int, default=2, help='dimension')
+    parser.add_argument('--k', type=int, default=2, help='subset size')
+    parser.add_argument('--cov', type=float, default=1, help='covariance')
+    parser.add_argument('--job_n', type=int, default=50, help='number of workers')
+    parser.add_argument('--target', type=str, default='probability', help='target function')
     args = parser.parse_args()
     
     return args
