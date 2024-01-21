@@ -21,6 +21,8 @@ if __name__ == '__main__':
     target = args.target
     seed = args.seed
 
+    assert target in ["probability", "abs_probability", "test_loss", "abs_test_loss", "avg_train_loss", "avg_abs_test_loss", "abs_avg_test_loss"], f'Invalid target: {target}'
+    
     out_file = f"results/target={target}/n={n}_d={d}_k={k}/s={seed}_cov={cov}.txt"
     
     X_train, y_train, X_test, y_test = data_generation(n, d, cov, seed, target=target)
