@@ -1,5 +1,7 @@
 import argparse
 import numpy as np
+from sklearn.datasets import make_spd_matrix
+
 from target import target_value
 from actual import actual_effect
 
@@ -12,11 +14,12 @@ def get_args():
     parser.add_argument('--cov', type=float, default=1, help='covariance')
     parser.add_argument('--job_n', type=int, default=50, help='number of workers')
     parser.add_argument('--target', type=str, default='probability', help='target function')
+    parser.add_argument('--skewed', action='store_true', help='skewed normal')
     args = parser.parse_args()
     
     return args
 
-def data_generation(n, d, cov, seed, target="probability"):
+def data_generation(n, d, cov, seed, isSkewed=False, target="probability"):
     np.random.seed(seed)
     
     # generate d-dimensional data
@@ -25,8 +28,14 @@ def data_generation(n, d, cov, seed, target="probability"):
 
     mean_p = np.zeros(d)
     mean_p[0] = 1
-    
-    covariance = np.eye(d) * cov
+
+    if isSkewed:
+        # Generate a random positive definite covariance matrix
+        raw_covariance = make_spd_matrix(d)
+        covariance = cov * (1/np.linalg.det(raw_covariance))**(1/d) * raw_covariance
+    else:
+        covariance = np.eye(d) * cov
+
     x_n = np.random.multivariate_normal(mean_n, covariance, int(n/2))
     x_p = np.random.multivariate_normal(mean_p, covariance, int(n/2))
 
