@@ -66,18 +66,6 @@ def adaptive_IWLS(X_train, y_train, X_test, y_test, k=5, target="probability"):
         X_train_bar = np.delete(X_train_bar, top_indices[0], axis=0)
         X_train_bar_with_index = np.delete(X_train_bar_with_index, top_indices[0], axis=0)
         y_train = np.delete(y_train, top_indices[0], axis=0)
-        
-        
-        # # One step IWLS update
-        # X_weighted = X.T * W
-        # Hessian = np.dot(X_weighted, X)
-        # gradient = np.dot(X.T, y_train - p)
-        # coefficients += np.linalg.solve(Hessian, gradient)
-
-        # def sigmoid(z):
-        #     return 1 / (1 + np.exp(-z))
-
-        # p = sigmoid(np.dot(X, coefficients))
 
         # Train to full convergence
         lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)
