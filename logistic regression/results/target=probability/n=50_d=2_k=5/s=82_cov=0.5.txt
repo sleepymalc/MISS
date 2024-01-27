@@ -18,6 +18,9 @@ Margin-based Best Subset
 First-order Best Subset
 	top 10: [28 29  5 21 39  0 11 26 22  2]
 
+Adaptive First-order Best Subset
+	top 10: [28 29 39  5 21]
+
 IWLS Best Subset v.s. Best Subset (size=k)
 	Actual rank: 78
 
@@ -31,4 +34,7 @@ N Group
 	Actual rank: 2085122
 
 First-order Best Subset v.s. Best Subset (size=k)
+	Actual rank: 54
+
+Adaptive First-order Best Subset v.s. Best Subset (size=k)
 	Actual rank: 54
