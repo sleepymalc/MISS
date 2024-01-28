@@ -9,7 +9,7 @@ IWLS Best Subset
 	top 10: [ 5 16 25 33 10 47 19 44 42  8]
 
 Adaptive IWLS Best Subset
-	top 5: [ 5 16 10 25 49]
+	top 5: [ 5 16 10 25 26]
 
 Margin-based Best Subset
 	positive group:	top 10: [25 33 47 40 49 34 38 42 46 29]
@@ -17,6 +17,9 @@ Margin-based Best Subset
 
 First-order Best Subset
 	top 10: [ 5 16 25 33 10 44 47 19 42  8]
+
+Adaptive First-order Best Subset
+	top 10: [ 5 16 10 25 49]
 
 IWLS Best Subset v.s. Best Subset (size=k)
 	Actual rank: 33606
@@ -31,4 +34,7 @@ N Group
 	Actual rank: 33790
 
 First-order Best Subset v.s. Best Subset (size=k)
+	Actual rank: 33606
+
+Adaptive First-order Best Subset v.s. Best Subset (size=k)
 	Actual rank: 33606
