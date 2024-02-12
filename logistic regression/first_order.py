@@ -7,7 +7,7 @@ def first_order(X_train, y_train, X_test, y_test, target="probability"):
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
-    
+
     # Compute the Hessian w.r.t. the parameters
     Hessian = np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n
 
@@ -19,9 +19,9 @@ def first_order(X_train, y_train, X_test, y_test, target="probability"):
     param_influence = Hessian_inv @ grad_loss_train / n
 
     phi = target_phi(X_train, y_train, X_test, y_test, target=target)
-    
+
     influence = target_influence(phi, param_influence, target=target)
-  
+
     FO_best = np.argsort(influence)[-n:][::-1]
 
     return FO_best
@@ -45,12 +45,12 @@ def adaptive_first_order(X_train, y_train, X_test, y_test, k=5, target="probabil
         param_influence = Hessian_inv @ grad_loss_train / n
 
         phi = target_phi(X_train, y_train, X_test, y_test, target=target)
-        
-        influence = target_influence(phi, param_influence, target=target)    
-          
+
+        influence = target_influence(phi, param_influence, target=target)
+
         print_size = k * 2
         top_indices = np.argsort(influence)[-(print_size):][::-1]
-        
+
         actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
         adaptive_FO_best_k[i] = actual_top_indices[0]
 
@@ -59,7 +59,7 @@ def adaptive_first_order(X_train, y_train, X_test, y_test, k=5, target="probabil
         X_train_bar = np.delete(X_train_bar, top_indices[0], axis=0)
         X_train_bar_with_index = np.delete(X_train_bar_with_index, top_indices[0], axis=0)
         y_train = np.delete(y_train, top_indices[0], axis=0)
-        
+
 
         # Train to full convergence
         lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)

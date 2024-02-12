@@ -23,11 +23,11 @@ if __name__ == '__main__':
     seed = args.seed
 
     assert target in ["probability", "abs_probability", "test_loss", "abs_test_loss", "avg_abs_test_loss", "abs_avg_test_loss"], f'Invalid target: {target}'
-    
+
     out_file = f"results/target={target}/n={n}_d={d}_k={k}/s={seed}_cov={cov}.txt"
-    
+
     X_train, y_train, X_test, y_test = data_generation(n, d, cov, seed, isSkewed=isSkewed, target=target)
-    
+
     print_size = k * 2
 
     # Best Subset
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     with open(out_file, 'a') as f:
         f.write('IWLS Best Subset\n')
         f.write(f"\ttop {print_size}: {IWLS_best[:print_size]}\n\n")
-    
+
     # Adaptive IWLS
     adaptive_IWLS_best_k = adaptive_IWLS(X_train, y_train, X_test, y_test, k=k, target=target)
     with open(out_file, 'a') as f:
@@ -76,7 +76,7 @@ if __name__ == '__main__':
         rank = actual_rank(X_train, y_train, X_test, y_test, IWLS_best[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
 
-    
+
         f.write('Adaptive IWLS Best Subset v.s. Best Subset (size=k)\n')
         rank = actual_rank(X_train, y_train, X_test, y_test, adaptive_IWLS_best_k, best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
@@ -86,11 +86,11 @@ if __name__ == '__main__':
         f.write(f'P Group\n')
         rank = actual_rank(X_train, y_train, X_test, y_test, ind_p[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n')
-    
+
         f.write(f'N Group\n')
         rank = actual_rank(X_train, y_train, X_test, y_test, ind_n[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
-        
+
         f.write('First-order Best Subset v.s. Best Subset (size=k)\n')
         rank = actual_rank(X_train, y_train, X_test, y_test, FO_best[:k], best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
