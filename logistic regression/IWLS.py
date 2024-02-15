@@ -73,3 +73,99 @@ def adaptive_IWLS(X_train, y_train, X_test, y_test, k=5, target="probability"):
         p = lr.predict_proba(X_train)[:, 1]
 
     return adaptive_IWLS_best_k
+
+def adaptive_IWLS_ablation_W(X_train, y_train, X_test, y_test, k=5, target="probability"):
+    n = X_train.shape[0]
+    lr = LogisticRegression(penalty=None).fit(X_train, y_train)
+    coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
+    p = lr.predict_proba(X_train)[:, 1]
+
+    X_train_bar = np.hstack((np.ones((n, 1)), X_train))
+    X_train_bar_with_index = np.hstack((X_train_bar, np.arange(n).reshape(-1, 1)))
+    adaptive_IWLS_best_k = np.zeros(k, dtype=int)
+
+    W = p * (1 - p)
+
+    for i in range(k):
+        X = X_train_bar_with_index[:, :-1] # without index
+        y = np.dot(X, coefficients) + (y_train - p) / W
+
+        # Calculate phi adaptively
+        phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+
+        influence = WLS_influence(X, y, coefficients, W, phi, target=target)
+
+        print_size = k * 2
+        top_indices = np.argsort(influence)[-(print_size):][::-1]
+
+        actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
+        adaptive_IWLS_best_k[i] = actual_top_indices[0]
+
+        # Remove the most influential data points
+        X = np.delete(X, top_indices[0], axis=0)
+        X_train = np.delete(X_train, top_indices[0], axis=0)
+        X_train_bar = np.delete(X_train_bar, top_indices[0], axis=0)
+        X_train_bar_with_index = np.delete(X_train_bar_with_index, top_indices[0], axis=0)
+        y_train = np.delete(y_train, top_indices[0], axis=0)
+        W = np.delete(W, top_indices[0])
+
+        # Train to full convergence
+        lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)
+        coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
+        p = lr.predict_proba(X_train)[:, 1]
+
+    return adaptive_IWLS_best_k
+
+def adaptive_IWLS_ablation_N(X_train, y_train, X_test, y_test, k=5, target="probability"):
+    n = X_train.shape[0]
+    lr = LogisticRegression(penalty=None).fit(X_train, y_train)
+    coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
+    p = lr.predict_proba(X_train)[:, 1]
+
+    X_train_bar = np.hstack((np.ones((n, 1)), X_train))
+    X_train_bar_with_index = np.hstack((X_train_bar, np.arange(n).reshape(-1, 1)))
+    adaptive_IWLS_best_k = np.zeros(k, dtype=int)
+
+    W_fix = p * (1 - p)
+    for i in range(k):
+        W = p * (1 - p)
+        X = X_train_bar_with_index[:, :-1] # without index
+        y = np.dot(X, coefficients) + (y_train - p) / W
+
+        # Calculate phi adaptively
+        phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+
+        N = np.dot(W_fix * X.T, X)
+
+        def WLS_influence_helper(X, y, coef, W, N, phi, target="probability"):
+            N_inv = np.linalg.inv(N)
+            r = W * (np.dot(X, coef) - y)
+            param_influence = N_inv @ X.T * r
+
+            influence = target_influence(phi, param_influence, target=target)
+            influence = influence / (1 - np.diag(np.diag(W) @ X @ N_inv @ X.T)) # adjust by leverage score
+
+            return influence
+
+        influence = WLS_influence_helper(X, y, coefficients, W, N, phi, target=target)
+
+        print_size = k * 2
+        top_indices = np.argsort(influence)[-(print_size):][::-1]
+
+        actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
+        adaptive_IWLS_best_k[i] = actual_top_indices[0]
+
+        # Remove the most influential data points
+        X = np.delete(X, top_indices[0], axis=0)
+        X_train = np.delete(X_train, top_indices[0], axis=0)
+        X_train_bar = np.delete(X_train_bar, top_indices[0], axis=0)
+        X_train_bar_with_index = np.delete(X_train_bar_with_index, top_indices[0], axis=0)
+        y_train = np.delete(y_train, top_indices[0], axis=0)
+        W_fix = np.delete(W_fix, top_indices[0])
+
+        # Train to full convergence
+        lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)
+        coefficients = np.concatenate((np.array([lr.intercept_[0]]), lr.coef_[0]))
+        p = lr.predict_proba(X_train)[:, 1]
+
+    return adaptive_IWLS_best_k
