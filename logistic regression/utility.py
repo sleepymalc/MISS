@@ -16,12 +16,12 @@ def get_args():
     parser.add_argument('--target', type=str, default='probability', help='target function')
     parser.add_argument('--skewed', action='store_true', help='skewed normal')
     args = parser.parse_args()
-    
+
     return args
 
 def data_generation(n, d, cov, seed, isSkewed=False, target="probability"):
     np.random.seed(seed)
-    
+
     # generate d-dimensional data
     mean_n = np.zeros(d)
     mean_n[0] = -1
@@ -45,7 +45,7 @@ def data_generation(n, d, cov, seed, isSkewed=False, target="probability"):
     X_train = np.vstack((x_n, x_p))
     y_train = np.hstack((y_n, y_p))
 
-    if target in ["probability", "abs_probability", "test_loss", "abs_test_loss"]: # only one test point    
+    if target in ["probability", "abs_probability", "test_loss", "abs_test_loss"]: # only one test point
         # Choose mean_n or mean_p wp 1/2
         if np.random.rand() < 0.5:
             X_test = np.random.multivariate_normal(mean_n, covariance, 1)
@@ -64,9 +64,9 @@ def data_generation(n, d, cov, seed, isSkewed=False, target="probability"):
 
     return X_train, y_train, X_test, y_test
 
-def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, target="probability"):
-    original_value = target_value(X_train, y_train, x_test, y_test, target=target)
-    actual_score = actual_effect(X_train, y_train, x_test, y_test, subset_to_remove, original_value, target=target)
+def actual_rank(X_train, y_train, X_test, y_test, subset_to_remove, score, target="probability"):
+    original_value = target_value(X_train, y_train, X_test, y_test, target=target)
+    actual_score = actual_effect(X_train, y_train, X_test, y_test, subset_to_remove, original_value, target=target)
 
     # tie-handling. ref: https://stackoverflow.com/questions/39059371/can-numpys-argsort-give-equal-element-the-same-rank
     def rankmin(x):
@@ -74,6 +74,6 @@ def actual_rank(X_train, y_train, x_test, y_test, subset_to_remove, score, targe
         csum = np.zeros_like(counts)
         csum[1:] = counts[:-1].cumsum()
         return csum[inv]+1
-    
+
     score_rank = rankmin(-1 * np.array(score))
     return score_rank[np.where(score == actual_score)[0][0]]
