@@ -3,7 +3,7 @@ warnings.filterwarnings("ignore")
 
 from actual import actual
 from first_order import first_order, adaptive_first_order
-from diagonal import diagonal, adaptive_diagonal
+from diagonal import diagonal, adaptive_diagonal, heuristic_diagonal
 from utility import data_generation, actual_rank, get_args
 
 if __name__ == '__main__':
@@ -52,6 +52,12 @@ if __name__ == '__main__':
         f.write('Adaptive Diagonal Best Subset\n')
         f.write(f"\ttop {k}: {adaptive_Diag_best_k}\n\n")
 
+    # Adaptive Diagonal
+    heuristic_Diag_best_k = heuristic_diagonal(X_train, y_train, X_test, y_test, k=k, target=target)
+    with open(out_file, 'a') as f:
+        f.write('Adaptive Diagonal Best Subset\n')
+        f.write(f"\ttop {k}: {heuristic_Diag_best_k}\n\n")
+
 
     # First-order method
     FO_best = first_order(X_train, y_train, X_test, y_test, target=target)
@@ -72,6 +78,10 @@ if __name__ == '__main__':
 
         f.write('Adaptive Diagonal Best Subset v.s. Best Subset (size=k)\n')
         rank = actual_rank(X_train, y_train, X_test, y_test, adaptive_Diag_best_k, best_k_score, target=target)
+        f.write(f'\tActual rank: {rank}\n\n')
+
+        f.write('Heuristic Diagonal Best Subset v.s. Best Subset (size=k)\n')
+        rank = actual_rank(X_train, y_train, X_test, y_test, heuristic_Diag_best_k, best_k_score, target=target)
         f.write(f'\tActual rank: {rank}\n\n')
 
 
