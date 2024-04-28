@@ -2,3 +2,6 @@
 /log
 *.npy
 *.mmap
+*/data
+*/checkpoint
+/archive
