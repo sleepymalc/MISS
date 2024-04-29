@@ -41,9 +41,9 @@ if __name__ == "__main__":
                      device=device)
 
     MISS = trak.most_k(args.k)
-    torch.save(MISS, f"./MISS/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
+    torch.save(MISS, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
 
     MISS_adaptive = trak.adaptive_most_k(args.k)
-    torch.save(MISS, f"./MISS/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
+    torch.save(MISS, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
 
     # Retrain the model without the most influential samples for every test point

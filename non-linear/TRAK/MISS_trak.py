@@ -50,7 +50,6 @@ class MISS_TRAK:
             projector = BasicProjector(grad_dim=count_parameters(self.model), proj_dim=2048, seed=0, proj_type=ProjectionType.rademacher, device="cuda", max_batch_size=8)
 
             # Go through the training loader to get grads
-
             # Φ
             all_grads_p = grad_calculator(data_loader=self.train_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=projector, checkpoint_id=checkpoint_id)
             out_to_loss_grads = out_to_loss_grad_calculator(data_loader=self.train_loader, model=self.model, func=self.model_output_class.get_out_to_loss_grad)
@@ -110,6 +109,7 @@ class MISS_TRAK:
             out_to_loss_grads = out_to_loss_grad_calculator(data_loader=self.train_loader, model=self.model, func=self.model_output_class.get_out_to_loss_grad)
             # ϕ
             all_grads_test_p = grad_calculator(data_loader=self.test_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=projector, checkpoint_id=checkpoint_id)
+
             # Append to list for later averaging
             all_grads_p_list.append(all_grads_p)
             Q_list.append(out_to_loss_grads)
@@ -130,12 +130,12 @@ class MISS_TRAK:
                 avg_all_grads_p = torch.mean(all_grads_p_tensor, dim=0)
                 score = all_grads_test_p[j] @ torch.linalg.inv(avg_all_grads_p.T @ avg_all_grads_p) @ avg_all_grads_p.T @ avg_Q
                 # Select the most influential sample
-                i_max = score.cpu().detach().numpy().flatten().argsort()[-1]
-                MIS[j, i] = index[i_max]
+                max_idx = score.cpu().detach().numpy().flatten().argsort()[-1]
+                MIS[j, i] = index[max_idx]
 
                 # Remove it from the training set
-                Q_tensor = torch.cat([Q_tensor[:i_max], Q_tensor[i_max + 1:]], dim=0)
-                all_grads_p_tensor = torch.cat([all_grads_p_tensor[:i_max], all_grads_p_tensor[i_max + 1:]], dim=0)
-                index = index[:i_max] + index[i_max + 1:]
+                Q_tensor = torch.cat([torch.cat([Q_tensor[:, :max_idx, :max_idx], Q_tensor[:, :max_idx, max_idx+1:]], dim=2),torch.cat([Q_tensor[:, max_idx+1:, :max_idx], Q_tensor[:, max_idx+1:, max_idx+1:]], dim=2)],dim=1)
+                all_grads_p_tensor = torch.cat([all_grads_p_tensor[:, :max_idx, :], all_grads_p_tensor[:, max_idx+1:, :]], dim=1)
+                index = index[:max_idx] + index[max_idx + 1:]
 
         return MIS
