@@ -1,14 +1,15 @@
 from TRAK.MISS_trak import MISS_TRAK
 from IF.MISS_IF import MISS_IF
-from model_train import MLP, SubsetSamper, MNISTModelOutput
+from model_train import MLP, MNISTModelOutput, data_generation
 import torch
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
 import argparse
 
 # First, check if CUDA is available
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
+
+def train_one_step(model, model_checkpoints, MIS):
+    pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -17,19 +18,7 @@ if __name__ == "__main__":
     parser.add_argument("--k", type=int, default=10, help="size of the most influential subset")
     args = parser.parse_args()
 
-    if args.ensemble > 200:
-        exit(0)
-
-    # Load MNIST data
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-    sampler_train = SubsetSamper([i for i in range(5000)])
-    sampler_test = SubsetSamper([i for i in range(500)])
-
-    train_loader = DataLoader(train_dataset, batch_size=1, sampler=sampler_train)
-    test_loader = DataLoader(test_dataset, batch_size=1, sampler=sampler_test)
+    train_loader, test_loader = data_generation([], mode='TRAK')
 
     checkpoint_files = [f"./checkpoint/seed_{args.seed}_ensemble_{i}.pt" for i in range(args.ensemble)]
 
@@ -38,12 +27,15 @@ if __name__ == "__main__":
                      train_loader=train_loader,
                      test_loader=test_loader,
                      model_output_class=MNISTModelOutput,
+                     proj_dim=1000,
                      device=device)
 
-    MISS = trak.most_k(args.k)
-    torch.save(MISS, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
+    # TRAK
+    # MISS = trak.most_k(args.k)
+    # torch.save(MISS, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
 
+    # adaptive TRAK
     MISS_adaptive = trak.adaptive_most_k(args.k)
-    torch.save(MISS, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
+    torch.save(MISS_adaptive, f"./TRAK/results/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
 
     # Retrain the model without the most influential samples for every test point

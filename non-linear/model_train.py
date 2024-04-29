@@ -34,7 +34,6 @@ class BaseModelOutputClass():
         '''
         pass
 
-
 class MNISTModelOutput(BaseModelOutputClass):
     def __init__(self):
         super().__init__(self)
@@ -136,6 +135,29 @@ class SubsetSamper(Sampler):
     def __len__(self):
         return len(self.indices)
 
+def data_generation(subset_remove, mode='train'):
+    # Load MNIST data
+    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
+    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
+    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+    # remove the corresponding index from the subset_remove
+    sampler_train = SubsetSamper([i for i in range(5000) if i not in subset_remove])
+
+    # portion_index_test = np.random.choice([i for i in range(500)], size=500, replace=False, p=None)
+    sampler_test = SubsetSamper([i for i in range(500)])
+
+    if mode == 'train':
+        train_batch_size, test_batch_size = 64, 64
+    elif mode == 'eval':
+        train_batch_size, test_batch_size = 64, 1
+    elif mode == 'TRAK':
+        train_batch_size, test_batch_size = 1, 1
+
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, sampler=sampler_train)
+    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, sampler=sampler_test)
+    return train_loader, test_loader
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
@@ -146,32 +168,13 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    # Load MNIST data
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-    all_index = [i for i in range(5000)]
-    all_index_test = [i for i in range(500)]
-
-    # random.shuffle(all_index)
-    portion_index = np.random.choice(all_index, size=5000, replace=False, p=None)
-    sampler = SubsetSamper(portion_index)
-    train_loader = DataLoader(train_dataset, batch_size=64, sampler=sampler)
-
-    portion_index_test = np.random.choice(all_index_test, size=500, replace=False, p=None)
-    sampler_test = SubsetSamper(portion_index_test)
-    test_loader = DataLoader(test_dataset, batch_size=64, sampler=sampler_test)
-
-    with open(os.path.join("./checkpoint", f'selected_indices_seed_{args.seed}_sample_{len(portion_index)}_M.txt'), 'w') as f:
-        for idx in portion_index:
-            f.write(str(idx) + '\n')
+    train_loader, test_loader = data_generation([], mode='train')
 
     for ensemble_idx in range(args.ensemble):
         # Initialize the model, loss function, and optimizer
         model = MLP().to(device)
         model.train_with_seed(train_loader, epochs=30, seed=ensemble_idx)
 
-        torch.save(model.state_dict(), f"./checkpoint/seed_{args.seed}_sample_{len(portion_index)}_{ensemble_idx}.pt")
+        torch.save(model.state_dict(), f"./checkpoint/seed_{args.seed}_{ensemble_idx}.pt")
 
         model.test(test_loader)
