@@ -2,11 +2,9 @@ import sys
 sys.path.append("..")
 
 import torch
-# from torch.utils.data import DataLoader
+from tqdm import tqdm
 from .projector import CudaProjector, ProjectionType, BasicProjector
 from .grad_calculator import count_parameters, grad_calculator, out_to_loss_grad_calculator
-# from model_train import SubsetSamper
-from tqdm import tqdm
 
 class MISS_TRAK:
     def __init__(self,
@@ -87,7 +85,7 @@ class MISS_TRAK:
         '''
         all_grads_test_p, all_grads_p_list, Q_list = self.TRAK_feature()
 
-        test_num = all_grads_test_p.size(0)
+        test_size = all_grads_test_p.size(0)
         ensemble_num = all_grads_p_list.size(0)
 
         # Calculate average of x_invXTX_XT
@@ -102,11 +100,11 @@ class MISS_TRAK:
         # Compute score
         score = avg_x_invXTX_XT @ avg_Q
 
-        MIS = torch.zeros(test_num, k, dtype=torch.int32)
+        MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
         # Sort and get the indices of top k influential samples for each test sample
         print("Start TRAK greedy")
-        for i in range(test_num):
+        for i in tqdm(range(test_size)):
             MIS[i, :] = torch.topk(score[i], k).indices
 
         return MIS
@@ -117,15 +115,15 @@ class MISS_TRAK:
         '''
         all_grads_test_p, all_grads_p_list, Q_list = self.TRAK_feature()
 
-        test_num = all_grads_test_p.size(0)
-        train_num = all_grads_p_list.size(1)
+        test_size = all_grads_test_p.size(0)
+        train_size = all_grads_p_list.size(1)
         ensemble_num = all_grads_p_list.size(0)
 
-        MIS = torch.zeros(test_num, k, dtype=torch.int32)
+        MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
         print("Start adaptive TRAK greedy")
-        for j in range(tqdm(test_num)):
-            index = [i for i in range(train_num)]
+        for j in tqdm(range(test_size)):
+            index = [i for i in range(train_size)]
             for i in range(k):
                 if i == 0:
                     all_grads_p_list_cpy = all_grads_p_list.clone()

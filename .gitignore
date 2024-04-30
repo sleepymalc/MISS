@@ -1,9 +1,8 @@
 /job
 /log
+/archive
 *.npy
 *.mmap
 *.pt
 */data
 */checkpoint
-/archive
-**/__pycache__/*.pyc

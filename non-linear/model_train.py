@@ -79,7 +79,7 @@ class MLP(nn.Module):
         x = self.layers[-1](x)
         return x
 
-    def train_with_seed(self, train_loader, epochs=30, seed=0):
+    def train_with_seed(self, train_loader, epochs=30, seed=0, verbose=True):
         torch.manual_seed(seed)
         random.seed(seed)
         np.random.seed(seed)
@@ -96,8 +96,8 @@ class MLP(nn.Module):
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
-            print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
-
+            if verbose:
+                print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
         print("Training complete")
 
     def test(self, test_loader):
@@ -135,17 +135,17 @@ class SubsetSamper(Sampler):
     def __len__(self):
         return len(self.indices)
 
-def data_generation(subset_remove, mode='train'):
+def data_generation(train_size, test_size, subset_remove, mode='train'):
     # Load MNIST data
     transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
     train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
     test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 
     # remove the corresponding index from the subset_remove
-    sampler_train = SubsetSamper([i for i in range(5000) if i not in subset_remove])
+    sampler_train = SubsetSamper([i for i in range(train_size) if i not in subset_remove])
 
     # portion_index_test = np.random.choice([i for i in range(500)], size=500, replace=False, p=None)
-    sampler_test = SubsetSamper([i for i in range(500)])
+    sampler_test = SubsetSamper([i for i in range(test_size)])
 
     if mode == 'train':
         train_batch_size, test_batch_size = 64, 64
@@ -160,6 +160,8 @@ def data_generation(subset_remove, mode='train'):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--train_size", type=int, default=5000, help="train dataset size")
+    parser.add_argument("--test_size", type=int, default=500, help="test dataset size")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
     parser.add_argument("--seed", type=int, default=0, help="seed")
     args = parser.parse_args()
@@ -168,7 +170,7 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    train_loader, test_loader = data_generation([], mode='train')
+    train_loader, test_loader = data_generation(args.train_size, args.test_size, [], mode='train')
 
     for ensemble_idx in range(args.ensemble):
         # Initialize the model, loss function, and optimizer

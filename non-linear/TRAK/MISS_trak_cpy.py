@@ -117,11 +117,11 @@ class MISS_TRAK:
         MIS = torch.zeros(num_test_samples, k, dtype=torch.int32)
 
         ensemble_num = all_grads_p_list.size(0)
-        train_num = all_grads_p_list.size(1)
+        train_size = all_grads_p_list.size(1)
 
         # Iterate over each test sample
         for j in range(num_test_samples):
-            index = [i for i in range(train_num)]
+            index = [i for i in range(train_size)]
             for i in range(k):
                 if i == 0:
                     all_grads_p_list_cpy = all_grads_p_list.clone()
@@ -133,7 +133,7 @@ class MISS_TRAK:
                     for checkpoint_id, checkpoint_file in enumerate(tqdm(self.model_checkpoints)):
                         self.model.load_state_dict(torch.load(checkpoint_file))
                         # train k more steps without the most influential sample:
-                        dataset_index = [l for l in range(train_num) if l not in MIS[j, :i]]
+                        dataset_index = [l for l in range(train_size) if l not in MIS[j, :i]]
                         new_train_loader = DataLoader(self.train_loader.dataset, batch_size=self.train_loader.batch_size, sampler=SubsetSamper(dataset_index))
                         self.model.train_with_seed(new_train_loader, epochs=3, seed=0)
 
