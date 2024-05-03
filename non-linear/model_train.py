@@ -1,15 +1,14 @@
-import os
 import argparse
 import random
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader, Sampler
+from utlis.data import data_generation
 
 # First, check if CUDA is available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = "cpu"
 print("Using device:", device)
 
 class BaseModelOutputClass():
@@ -116,7 +115,7 @@ class MLP(nn.Module):
         accuracy = 100 * correct / total
         print(f'Accuracy of the model on the test set: {accuracy:.2f}%')
 
-    def get_model_output(self, test_loader):
+    def get_individual_output(self, test_loader):
         self.eval()
         model_output_list = []
         for _, data in enumerate(test_loader):
@@ -125,38 +124,19 @@ class MLP(nn.Module):
         model_output_tensor = torch.stack(model_output_list, dim=0)
         return model_output_tensor
 
-class SubsetSamper(Sampler):
-    def __init__(self, indices):
-        self.indices = indices
+    def get_individual_loss(self, test_loader):
+        self.eval()
+        loss_list = []
+        for _, data in enumerate(test_loader):
+            image, label = data
+            image, label = image.to(device), label.to(device)
+            raw_logit = self(image)
 
-    def __iter__(self):
-        return iter(self.indices)
-
-    def __len__(self):
-        return len(self.indices)
-
-def data_generation(train_size, test_size, subset_remove, mode='train'):
-    # Load MNIST data
-    transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))])
-    train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
-    test_dataset = datasets.MNIST(root='./data', train=False, download=True, transform=transform)
-
-    # remove the corresponding index from the subset_remove
-    sampler_train = SubsetSamper([i for i in range(train_size) if i not in subset_remove])
-
-    # portion_index_test = np.random.choice([i for i in range(500)], size=500, replace=False, p=None)
-    sampler_test = SubsetSamper([i for i in range(test_size)])
-
-    if mode == 'train':
-        train_batch_size, test_batch_size = 64, 64
-    elif mode == 'eval':
-        train_batch_size, test_batch_size = 64, 1
-    elif mode == 'TRAK':
-        train_batch_size, test_batch_size = 1, 1
-
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, sampler=sampler_train)
-    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, sampler=sampler_test)
-    return train_loader, test_loader
+            loss_fn = nn.CrossEntropyLoss(reduction='none')
+            logp = -loss_fn(raw_logit, label)
+            loss_list.append(logp)
+        loss_tensor = torch.cat(loss_list, dim=0)
+        return loss_tensor
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -170,7 +150,7 @@ if __name__ == "__main__":
     random.seed(args.seed)
     np.random.seed(args.seed)
 
-    train_loader, test_loader = data_generation(args.train_size, args.test_size, [], mode='train')
+    train_loader, test_loader = data_generation(list(range(args.train_size)), list(range(args.test_size)), mode='train')
 
     for ensemble_idx in range(args.ensemble):
         # Initialize the model, loss function, and optimizer

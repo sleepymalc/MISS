@@ -32,12 +32,18 @@ def grad_calculator(data_loader,
             # TODO: handle numerical problem better
             # print("numerical problem happens, model output function equals to inf")
             grads = torch.zeros(count_parameters(model), dtype=torch.float32).to(device)
-            grads_p = projector.project(grads.clone().detach().unsqueeze(0), model_id=checkpoint_id, is_grads_dict=False)
+            if projector is None:
+                grads_p = grads.clone().detach().unsqueeze(0)
+            else:
+                grads_p = projector.project(grads.clone().detach().unsqueeze(0), model_id=checkpoint_id, is_grads_dict=False)
             all_grads.append(grads_p)
         else:
-            grads = parameters_to_vector(torch.autograd.grad(model_output, parameters, retain_graph=True))
+            grads = parameters_to_vector(torch.autograd.grad(model_output, parameters, retain_graph=True)).to(device)
             grads /= normalize_factor
-            grads_p = projector.project(grads.clone().detach().unsqueeze(0), model_id=checkpoint_id, is_grads_dict=False)
+            if projector is None:
+                grads_p = grads.clone().detach().unsqueeze(0)
+            else:
+                grads_p = projector.project(grads.clone().detach().unsqueeze(0), model_id=checkpoint_id, is_grads_dict=False)
             all_grads.append(grads_p)
     all_grads = torch.cat(all_grads, dim=0)
     return all_grads

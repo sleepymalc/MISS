@@ -2,11 +2,9 @@ import sys
 sys.path.append("..")
 
 import torch
-from torch.utils.data import DataLoader
-from .projector import CudaProjector, ProjectionType, BasicProjector
-from .grad_calculator import count_parameters, grad_calculator, out_to_loss_grad_calculator
-from model_train import SubsetSamper
 from tqdm import tqdm
+from utlis.projector import CudaProjector, ProjectionType, BasicProjector
+from utlis.grad_calculator import count_parameters, grad_calculator, out_to_loss_grad_calculator
 
 class MISS_TRAK:
     def __init__(self,
@@ -39,8 +37,10 @@ class MISS_TRAK:
     def TRAK_feature(self):
         # Check if the result is already cached
         if self.TRAK_feature_cache is not None:
+            print("Using cached result for TRAK features")
             return self.TRAK_feature_cache
 
+        print("Start TRAK features calculation")
         all_grads_p_list = []
         Q_list = []
 
@@ -81,18 +81,12 @@ class MISS_TRAK:
 
     def most_k(self, k):
         '''
-        Select the most influential k samples
+        Select the most influential k samples by greedy
         '''
         all_grads_test_p, all_grads_p_list, Q_list = self.TRAK_feature()
 
-         # Initialize MIS tensor
-        num_test_samples = all_grads_test_p.size(0)
-        MIS = torch.zeros(num_test_samples, k, dtype=torch.int32)
-
+        test_size = all_grads_test_p.size(0)
         ensemble_num = all_grads_p_list.size(0)
-
-        #Calculate average of Q
-        avg_Q = torch.mean(Q_list, dim=0)
 
         # Calculate average of x_invXTX_XT
         x_invXTX_XT_list = []
@@ -100,70 +94,40 @@ class MISS_TRAK:
             x_invXTX_XT_list.append(all_grads_test_p @ torch.linalg.inv(all_grads_p_list[l].T @ all_grads_p_list[l]) @ all_grads_p_list[l].T)
         avg_x_invXTX_XT = torch.mean(torch.stack(x_invXTX_XT_list), dim=0)
 
+        #Calculate average of Q
+        avg_Q = torch.mean(Q_list, dim=0)
+
         # Compute score
-        score = avg_x_invXTX_XT @ avg_Q
+        TRAK_score = avg_x_invXTX_XT @ avg_Q
+
+        MISS = torch.zeros(test_size, k, dtype=torch.int32)
 
         # Sort and get the indices of top k influential samples for each test sample
-        for i in range(num_test_samples):
-            MIS[i, :] = torch.topk(score[i], k).indices
+        print("Start TRAK greedy")
+        for i in tqdm(range(test_size)):
+            MISS[i, :] = torch.topk(TRAK_score[i], k).indices
 
-        return MIS
+        return MISS
 
     def adaptive_most_k(self, k):
+        '''
+        Select the most influential k samples by adaptive greedy
+        '''
         all_grads_test_p, all_grads_p_list, Q_list = self.TRAK_feature()
 
-        # Initialize MIS tensor
-        num_test_samples = all_grads_test_p.size(0)
-        MIS = torch.zeros(num_test_samples, k, dtype=torch.int32)
-
-        ensemble_num = all_grads_p_list.size(0)
+        test_size = all_grads_test_p.size(0)
         train_size = all_grads_p_list.size(1)
+        ensemble_num = all_grads_p_list.size(0)
 
-        # Iterate over each test sample
-        for j in range(num_test_samples):
-            index = [i for i in range(train_size)]
+        MISS = torch.zeros(test_size, k, dtype=torch.int32)
+
+        print("Start adaptive TRAK greedy")
+        for j in tqdm(range(test_size)):
+            index = list(range(train_size))
             for i in range(k):
                 if i == 0:
                     all_grads_p_list_cpy = all_grads_p_list.clone()
                     Q_list_cpy = Q_list.clone()
-                else:
-                    all_grads_p_list = []
-                    Q_list = []
-
-                    for checkpoint_id, checkpoint_file in enumerate(tqdm(self.model_checkpoints)):
-                        self.model.load_state_dict(torch.load(checkpoint_file))
-                        # train k more steps without the most influential sample:
-                        dataset_index = [l for l in range(train_size) if l not in MIS[j, :i]]
-                        new_train_loader = DataLoader(self.train_loader.dataset, batch_size=self.train_loader.batch_size, sampler=SubsetSamper(dataset_index))
-                        self.model.train_with_seed(new_train_loader, epochs=3, seed=0)
-
-                        self.model.eval()
-
-                        parameters = list(self.model.parameters())
-                        normalize_factor = torch.sqrt(torch.tensor(count_parameters(self.model), dtype=torch.float32))
-
-                        # projection of the grads
-                        # projector = CudaProjector(grad_dim=count_parameters(self.model), proj_dim=self.proj_dim, seed=0, proj_type=ProjectionType.rademacher, device="cuda", max_batch_size=8)
-                        projector = BasicProjector(grad_dim=count_parameters(self.model), proj_dim=self.proj_dim, seed=0, proj_type=ProjectionType.rademacher, device="cuda", max_batch_size=8)
-
-                        # Go through the training loader to get grads
-                        # Φ
-                        all_grads_p = grad_calculator(data_loader=self.train_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=projector, checkpoint_id=checkpoint_id)
-                        #Q
-                        out_to_loss_grads = out_to_loss_grad_calculator(data_loader=self.train_loader, model=self.model, func=self.model_output_class.get_out_to_loss_grad)
-                        # ϕ
-                        all_grads_test_p = grad_calculator(data_loader=self.test_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=projector, checkpoint_id=checkpoint_id)
-
-                        # Append to list for later averaging
-                        all_grads_p_list.append(all_grads_p)
-                        Q_list.append(out_to_loss_grads)
-
-                    # Convert lists to tensors
-                    all_grads_p_list_cpy = torch.stack(all_grads_p_list)
-                    Q_list_cpy = torch.stack(Q_list)
-
-                # Calculate average of Q
-                avg_Q = torch.mean(Q_list_cpy, dim=0)
 
                 # Calculate average of x_invXTX_XT
                 x_invXTX_XT_list = []
@@ -171,16 +135,19 @@ class MISS_TRAK:
                     x_invXTX_XT_list.append(all_grads_test_p[j] @ torch.linalg.inv(all_grads_p_list_cpy[l].T @ all_grads_p_list_cpy[l]) @ all_grads_p_list_cpy[l].T)
                 avg_x_invXTX_XT = torch.mean(torch.stack(x_invXTX_XT_list), dim=0)
 
+                # Calculate average of Q
+                avg_Q = torch.mean(Q_list_cpy, dim=0)
+
                 # Compute score
-                score = avg_x_invXTX_XT @ avg_Q
+                TRAK_score = avg_x_invXTX_XT @ avg_Q
 
                 # Select the most influential sample
-                max_idx = torch.topk(score, 1).indices
-                MIS[j, i] = index[max_idx]
+                max_idx = torch.topk(TRAK_score, 1).indices
+                MISS[j, i] = index[max_idx]
 
                 # Remove it from the training set
                 Q_list_cpy = torch.cat([torch.cat([Q_list_cpy[:, :max_idx, :max_idx], Q_list_cpy[:, :max_idx, max_idx+1:]], dim=2),torch.cat([Q_list_cpy[:, max_idx+1:, :max_idx], Q_list_cpy[:, max_idx+1:, max_idx+1:]], dim=2)],dim=1)
                 all_grads_p_list_cpy = torch.cat([all_grads_p_list_cpy[:, :max_idx, :], all_grads_p_list_cpy[:, max_idx+1:, :]], dim=1)
                 index = index[:max_idx] + index[max_idx + 1:]
 
-        return MIS
+        return MISS
