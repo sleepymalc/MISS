@@ -7,8 +7,7 @@ import torch.optim as optim
 from utlis.data import data_generation
 
 # First, check if CUDA is available
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 class BaseModelOutputClass():

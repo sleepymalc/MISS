@@ -65,7 +65,7 @@ class MISS_IF:
 
         train_data = self._convert_from_loader(self.train_loader)
 
-        for checkpoint_id, checkpoint_file in enumerate(tqdm(self.model_checkpoints)):
+        for checkpoint_id, checkpoint_file in enumerate(self.model_checkpoints):
             self.model.load_state_dict(torch.load(checkpoint_file))
             self.model.eval()
             influence_model = EkfacInfluence(
@@ -92,7 +92,7 @@ class MISS_IF:
 
         # Sort and get the indices of top k influential samples for each test sample
         print("Start TRAK greedy")
-        for i in tqdm(range(test_size)):
+        for i in range(test_size):
             MISS[i, :] = torch.topk(influence[i], k).indices
 
         self._reset()
@@ -138,7 +138,7 @@ class MISS_IF:
 
     #     return MISS
 
-    def adaptive_most_k(self, k):
+    def adaptive_most_k(self, k, step_size=10):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
         ensemble_num = len(self.model_checkpoints)
@@ -147,16 +147,21 @@ class MISS_IF:
 
         for j in tqdm(range(test_size)):
             index = list(range(train_size))
-            for i in range(k):
-                train_loader, test_loader = data_generation([i for i in range(train_size) if i not in MISS[j, :k]], list(range(test_size)), mode='MISS')
+            step = step_size
+            for i in range(0, k, step_size):
+                train_loader, test_loader = data_generation([l for l in range(train_size) if l not in MISS[j, :k]], list(range(test_size)), mode='MISS')
 
                 # most_k depends on self.train_loader and self.test_loader
                 self.train_loader = train_loader
                 self.test_loader = test_loader
 
-                max_idx = self.most_k(1)[j, 0]
-                MISS[j, i] = index[max_idx]
-                index = index[:max_idx] + index[max_idx + 1:]
+                # handle overflow
+                if i + step > k:
+                    step = k - i
+
+                max_idx_list = self.most_k(step)[j, :]
+                MISS[j, i:i+step] = torch.tensor([index[l] for l in max_idx_list])
+                index = [index[i] for i in range(len(index)) if i not in max_idx_list]
 
                 # update the model, the dataset
                 for idx, checkpoint_file in enumerate(self.model_checkpoints):

@@ -6,8 +6,7 @@ import torch
 import argparse
 
 # First, check if CUDA is available
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 if __name__ == "__main__":
@@ -26,32 +25,32 @@ if __name__ == "__main__":
     checkpoint_files = [f"./checkpoint/seed_{args.seed}_ensemble_{i}.pt" for i in range(args.ensemble)]
 
     # TRAK
-    # trak = MISS_TRAK(model=MLP().to(device),
-    #                  model_checkpoints=checkpoint_files,
-    #                  train_loader=train_loader,
-    #                  test_loader=test_loader,
-    #                  model_output_class=MNISTModelOutput,
-    #                  proj_dim=1000,
-    #                  device=device)
+    trak = MISS_TRAK(model=MLP().to(device),
+                     model_checkpoints=checkpoint_files,
+                     train_loader=train_loader,
+                     test_loader=test_loader,
+                     model_output_class=MNISTModelOutput,
+                     proj_dim=1000,
+                     device=device)
 
-    # MISS = trak.most_k(args.k)
-    # torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
+    MISS = trak.most_k(args.k)
+    torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
 
-    # MISS = trak.adaptive_most_k(args.k)
-    # torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
+    MISS = trak.adaptive_most_k(args.k)
+    torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
 
 
     # IF
-    IF = MISS_IF(model=MLP().to("cpu"),
+    IF = MISS_IF(model=MLP().to(device),
                  model_checkpoints=checkpoint_files,
                  train_loader=train_loader,
                  test_loader=test_loader,
                  model_output_class=MNISTModelOutput,
-                 device="cpu")
+                 device=device)
 
     # Retrain the model without the most influential samples for every test point
-    # MISS = IF.most_k(args.k)
-    # torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
+    MISS = IF.most_k(args.k)
+    torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
 
     MISS = IF.adaptive_most_k(args.k)
     torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")

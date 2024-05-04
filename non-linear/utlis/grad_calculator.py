@@ -26,7 +26,7 @@ def grad_calculator(data_loader,
                     projector,
                     checkpoint_id):
     all_grads = []
-    for _, data in enumerate(tqdm(data_loader)):
+    for _, data in enumerate(data_loader):
         model_output = func(data, model)
         if torch.isinf(model_output):
             # TODO: handle numerical problem better
