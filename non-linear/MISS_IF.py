@@ -37,14 +37,8 @@ class MISS_IF:
         self.device = device
         self.warm_start = True
 
-
-
     def _convert_from_loader(self, loader):
         data = [(features, labels) for features, labels in loader]
-        # for batch in loader:
-        #     features, labels = batch
-        #     data.append((features, labels))
-
         concatenated_data = [torch.cat([item[i] for item in data], dim=0) for i in range(len(data[0]))]
 
         return concatenated_data
@@ -57,12 +51,7 @@ class MISS_IF:
 
 
     def most_k(self, k):
-        '''
-        Select the most influential k samples
-        '''
-
         influence_list = []
-
         train_data = self._convert_from_loader(self.train_loader)
 
         for checkpoint_id, checkpoint_file in enumerate(self.model_checkpoints):
@@ -86,7 +75,8 @@ class MISS_IF:
 
         influence_list_tensor = torch.stack(influence_list)
         influence = torch.mean(influence_list_tensor, dim=0)
-
+        # transpose the influence tensor to get the shape of (test_size, train_size)
+        influence = influence.T
         test_size = len(self.test_loader)
         MISS = torch.zeros(test_size, k, dtype=torch.int32)
 
@@ -98,47 +88,7 @@ class MISS_IF:
         self._reset()
         return MISS
 
-    # def adaptive_most_k(self, k):
-    #     test_size = len(self.test_loader)
-    #     train_size = len(self.train_loader)
-    #     ensemble_num = len(self.model_checkpoints)
-    #     seed = int(re.search(r'seed_(\d+)_ensemble_(\d+)', self.model_checkpoints[0]).group(1))
-    #     MISS = torch.zeros(test_size, k, dtype=torch.int32)
-
-
-    #     for j in tqdm(range(test_size)):
-    #         model = self.model
-    #         model_checkpoints = self.model_checkpoints
-    #         index = list(range(train_size))
-    #         for i in range(k):
-    #             train_loader, test_loader = data_generation([i for i in range(train_size) if i not in MISS[j, :k]], list(range(test_size)), mode='MISS')
-    #             IF = MISS_IF(model=model,
-    #                          model_checkpoints=model_checkpoints,
-    #                          train_loader=train_loader,
-    #                          test_loader=test_loader,
-    #                          model_output_class=self.model_output_class,
-    #                          device=self.device)
-    #             max_idx = IF.most_k(1)[j, 0]
-    #             MISS[j, i] = index[max_idx]
-    #             index = index[:max_idx] + index[max_idx + 1:]
-
-    #             # update the model, the dataset
-    #             for idx, checkpoint_file in enumerate(model_checkpoints):
-    #                 if self.warm_start:
-    #                     model.load_state_dict(torch.load(checkpoint_file))
-    #                     epochs = 5
-    #                 else:
-    #                     epochs = 30
-    #                 train_loader, test_loader = data_generation([i for i in range(train_size) if i not in MISS[j, :k]], list(range(test_size)), mode='train')
-
-    #                 model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
-    #                 torch.save(model.state_dict(), f"./checkpoint/tmp/seed_{seed}_{idx}.pt")
-
-    #             model_checkpoints = [f"./checkpoint/tmp/seed_{seed}_{ensemble_idx}.pt" for ensemble_idx in range(ensemble_num)]
-
-    #     return MISS
-
-    def adaptive_most_k(self, k, step_size=10):
+    def adaptive_most_k(self, k, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
         ensemble_num = len(self.model_checkpoints)
