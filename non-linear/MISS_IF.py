@@ -99,7 +99,7 @@ class MISS_IF:
             index = list(range(train_size))
             step = step_size
             for i in range(0, k, step_size):
-                train_loader, test_loader = data_generation([l for l in range(train_size) if l not in MISS[j, :k]], list(range(test_size)), mode='MISS')
+                train_loader, test_loader = data_generation([l for l in range(train_size) if l not in MISS[j, :i]], list(range(test_size)), mode='MISS')
 
                 # most_k depends on self.train_loader and self.test_loader
                 self.train_loader = train_loader

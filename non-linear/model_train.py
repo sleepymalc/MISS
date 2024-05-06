@@ -96,7 +96,8 @@ class MLP(nn.Module):
                 running_loss += loss.item()
             if verbose:
                 print(f"Epoch {epoch+1}, Loss: {running_loss/len(train_loader)}")
-        print("Training complete")
+        if verbose:
+            print("Training complete")
 
     def test(self, test_loader):
         self.eval()
