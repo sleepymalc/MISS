@@ -50,8 +50,47 @@ class MISS_IF:
         self.test_loader = self.test_loader_cpy
 
 
+    # def most_k(self, k):
+    #     influence_list = []
+    #     train_data = self._convert_from_loader(self.train_loader)
+
+    #     for checkpoint_id, checkpoint_file in enumerate(self.model_checkpoints):
+    #         self.model.load_state_dict(torch.load(checkpoint_file))
+    #         self.model.eval()
+    #         influence_model = EkfacInfluence(
+    #             self.model,
+    #             update_diagonal=True,
+    #             hessian_regularization=0.001,
+    #         )
+    #         influence_model = influence_model.fit(self.train_loader)
+
+    #         parameters = list(self.model.parameters())
+    #         normalize_factor = torch.sqrt(torch.tensor(count_parameters(self.model), dtype=torch.float32))
+
+    #         all_grads_test_p = grad_calculator(data_loader=self.test_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=None, checkpoint_id=checkpoint_id)
+
+    #         influence_factors = influence_model.influence_factors(*train_data)
+
+    #         influence_list.append(influence_factors @ all_grads_test_p.T)
+
+    #     influence_list_tensor = torch.stack(influence_list)
+    #     influence = torch.mean(influence_list_tensor, dim=0)
+    #     # transpose the influence tensor to get the shape of (test_size, train_size)
+    #     influence = influence.T
+    #     test_size = len(self.test_loader)
+    #     MISS = torch.zeros(test_size, k, dtype=torch.int32)
+
+    #     # Sort and get the indices of top k influential samples for each test sample
+    #     print("Start TRAK greedy")
+    #     for i in range(test_size):
+    #         MISS[i, :] = torch.topk(influence[i], k).indices
+
+    #     self._reset()
+    #     return MISS
+
     def most_k(self, k):
-        influence_list = []
+        influence_sum = 0
+
         train_data = self._convert_from_loader(self.train_loader)
 
         for checkpoint_id, checkpoint_file in enumerate(self.model_checkpoints):
@@ -70,23 +109,21 @@ class MISS_IF:
             all_grads_test_p = grad_calculator(data_loader=self.test_loader, model=self.model, parameters=parameters, func=self.model_output_class.model_output, normalize_factor=normalize_factor, device=self.device, projector=None, checkpoint_id=checkpoint_id)
 
             influence_factors = influence_model.influence_factors(*train_data)
+            influence_sum += (influence_factors @ all_grads_test_p.T).T
 
-            influence_list.append(influence_factors @ all_grads_test_p.T)
+        influence_mean = influence_sum / len(self.model_checkpoints)
 
-        influence_list_tensor = torch.stack(influence_list)
-        influence = torch.mean(influence_list_tensor, dim=0)
-        # transpose the influence tensor to get the shape of (test_size, train_size)
-        influence = influence.T
+        # Calculate the indices of top k influential samples for each test sample
         test_size = len(self.test_loader)
         MISS = torch.zeros(test_size, k, dtype=torch.int32)
 
-        # Sort and get the indices of top k influential samples for each test sample
         print("Start TRAK greedy")
         for i in range(test_size):
-            MISS[i, :] = torch.topk(influence[i], k).indices
+            MISS[i, :] = torch.topk(influence_mean[i], k).indices
 
         self._reset()
         return MISS
+
 
     def adaptive_most_k(self, k, step_size=5):
         test_size = len(self.test_loader)
