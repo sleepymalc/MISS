@@ -4,7 +4,7 @@ def target_value(X_train, y_train, X_test, target="linear"):
     lr = LinearRegression().fit(X_train, y_train)
 
     if target == "linear":
-        value = lr.predict(X_test)
+        value = lr.predict(X_test.reshape(1, -1))
 
     return value
 

@@ -10,7 +10,6 @@ def actual_effect(X_train, y_train, X_test, subset_to_remove, original_value, ta
 
     if target == "linear":
         score = reduced_value - original_value
-
     return score
 
 def actual(X_train, y_train, X_test, k=5, job_n=50, target="linear"):

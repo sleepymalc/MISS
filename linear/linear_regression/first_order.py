@@ -9,7 +9,7 @@ def first_order(X_train, y_train, X_test, y_test, target="linear"):
     phi = target_phi(X_train, y_train, X_test, y_test, target=target)
 
     N = X_train.T @ X_train
-    param_influence = np.linalg.inv(N) @ X_train.T * (lr.predict(X_train) - y_train)
+    param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
 
     influence = target_influence(phi, param_influence, target=target)
 
@@ -28,7 +28,7 @@ def adaptive_first_order(X_train, y_train, X_test, y_test, k=5, target="linear")
         phi = target_phi(X_train, y_train, X_test, y_test, target=target)
 
         N = X_train.T @ X_train
-        param_influence = np.linalg.inv(N) @ X_train.T * (lr.predict(X_train) - y_train)
+        param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
 
         influence = target_influence(phi, param_influence, target=target)
 

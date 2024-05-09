@@ -13,8 +13,7 @@ def LAGS(X_train, y_train, X_test, y_test, target="linear"):
     N = X_train.T @ X_train
     H = X_train @ np.linalg.inv(N) @ X_train.T
 
-    param_influence = np.linalg.inv(N) @ X_train.T * (lr.predict(X_train) - y_train)
-
+    param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
     influence = target_influence(phi, param_influence, target=target) / (1 - np.diag(H))
     LAGS_best = np.argsort(influence)[-n:][::-1]
 
@@ -33,7 +32,7 @@ def adaptive_LAGS(X_train, y_train, X_test, y_test, k=5, target="linear"):
         N = X_train.T @ X_train
         H = X_train @ np.linalg.inv(N) @ X_train.T
 
-        param_influence = np.linalg.inv(N) @ X_train.T * (lr.predict(X_train) - y_train)
+        param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
 
         influence = target_influence(phi, param_influence, target=target) / (1 - np.diag(H))
 
