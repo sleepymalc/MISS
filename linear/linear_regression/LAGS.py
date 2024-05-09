@@ -1,53 +1,36 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
-from target import target_phi, target_influence
-from actual import actual_effect
-from target import target_value
 
-def LAGS(X_train, y_train, X_test, y_test, target="linear"):
+def LAGS(X_train, y_train, x_test):
     n = X_train.shape[0]
     lr = LinearRegression().fit(X_train, y_train)
 
-    phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+    N_inv = np.linalg.inv(X_train.T @ X_train)
+    H = X_train @ N_inv @ X_train.T
+    influence = ((x_test @ N_inv @ X_train.T).reshape(-1, 1) * (lr.predict(X_train) - y_train)).reshape(-1) / (1 - np.diag(H))
 
-    N = X_train.T @ X_train
-    H = X_train @ np.linalg.inv(N) @ X_train.T
-
-    param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
-    influence = target_influence(phi, param_influence, target=target) / (1 - np.diag(H))
     LAGS_best = np.argsort(influence)[-n:][::-1]
 
     return LAGS_best
 
-def adaptive_LAGS(X_train, y_train, X_test, y_test, k=5, target="linear"):
+def adaptive_LAGS(X_train, y_train, x_test, k=5):
     n = X_train.shape[0]
-    lr = LinearRegression().fit(X_train, y_train)
-
-    X_train_with_index = np.hstack((X_train, np.arange(n).reshape(-1, 1)))
+    index = list(range(n))
     adaptive_LAGS_best_k = np.zeros(k, dtype=int)
 
     for i in range(k):
-        phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+        lr = LinearRegression().fit(X_train, y_train)
 
-        N = X_train.T @ X_train
-        H = X_train @ np.linalg.inv(N) @ X_train.T
+        N_inv = np.linalg.inv(X_train.T @ X_train)
+        H = X_train @ N_inv @ X_train.T
+        influence = ((x_test @ N_inv @ X_train.T).reshape(-1, 1) * (lr.predict(X_train) - y_train)).reshape(-1) / (1 - np.diag(H))
 
-        param_influence = np.linalg.inv(N) @ X_train.T @ (lr.predict(X_train) - y_train)
-
-        influence = target_influence(phi, param_influence, target=target) / (1 - np.diag(H))
-
-        print_size = k * 2
-        top_indices = np.argsort(influence)[-(print_size):][::-1]
-
-        actual_top_indices = X_train_with_index[:, -1][top_indices].astype(int)
-        adaptive_LAGS_best_k[i] = actual_top_indices[0]
+        top_index = np.argsort(influence)[-1:][::-1][0]
+        adaptive_LAGS_best_k[i] = index[top_index]
 
         # Remove the most influential data points
-        X_train = np.delete(X_train, top_indices[0], axis=0)
-        X_train_with_index = np.delete(X_train_with_index, top_indices[0], axis=0)
-        y_train = np.delete(y_train, top_indices[0], axis=0)
-
-
-        lr = LinearRegression().fit(X_train_with_index[:, :-1], y_train)
+        X_train = np.delete(X_train, top_index, axis=0)
+        y_train = np.delete(y_train, top_index, axis=0)
+        index = np.delete(index, top_index, axis=0)
 
     return adaptive_LAGS_best_k
