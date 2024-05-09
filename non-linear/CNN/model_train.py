@@ -61,11 +61,11 @@ class MNISTModelOutput(BaseModelOutputClass):
 class CNN(nn.Module):
     def __init__(self, input_channels=1, output_size=10):
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(input_channels, 4, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(4, 8, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(input_channels, 2, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(2, 4, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(8 * 7 * 7, 16)  # Adjusted input size for MNIST
-        self.fc2 = nn.Linear(16, output_size)
+        self.fc1 = nn.Linear(4 * 7 * 7, 8)  # Adjusted input size for MNIST
+        self.fc2 = nn.Linear(8, output_size)
         self.relu = nn.ReLU()
 
     def forward(self, x):
@@ -73,7 +73,7 @@ class CNN(nn.Module):
         x = self.pool(x)
         x = self.relu(self.conv2(x))
         x = self.pool(x)
-        x = x.view(-1, 8 * 7 * 7)
+        x = x.view(-1, 4 * 7 * 7)
         x = self.relu(self.fc1(x))
         x = self.fc2(x)
         return x
