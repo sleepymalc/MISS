@@ -8,16 +8,17 @@ def first_order(X_train, Y_train, x_test, y_test):
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
 
     # Compute the Hessian w.r.t. the parameters
-    Hessian_inv = np.linalg.inv(np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n)
+    Hessian_inv = np.linalg.inv(X_train_bar.T @ np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])) @ X_train_bar)
 
     # Compute the gradient of the logistic loss w.r.t. the parameters
     sigma_train = lr.predict_proba(X_train)[:, 1] # P(1 | x)
     grad_loss_train = (sigma_train - Y_train) * X_train_bar.T
-    param_influence = Hessian_inv @ grad_loss_train / n
+    param_influence = Hessian_inv @ grad_loss_train
 
     x_test_bar = np.hstack((1, x_test))
-    sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][y_test]
-    phi = (1 - sigma_test) * sigma_test * x_test_bar
+    sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+    # phi = (1 - sigma_test) * sigma_test * x_test_bar
+    phi = (2 * y_test - 1) * x_test_bar
 
     influence = (phi @ param_influence).reshape(-1)
 
@@ -34,16 +35,18 @@ def adaptive_first_order(X_train, Y_train, x_test, y_test, k=5):
     for i in range(k):
         lr = LogisticRegression(penalty=None).fit(X_train, Y_train)
 
-        Hessian_inv = np.linalg.inv(np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n)
+        # Compute the Hessian w.r.t. the parameters
+        Hessian_inv = np.linalg.inv(X_train_bar.T @ np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])) @ X_train_bar)
 
         # Compute the gradient of the logistic loss w.r.t. the parameters
         sigma_train = lr.predict_proba(X_train)[:, 1] # P(1 | x)
         grad_loss_train = (sigma_train - Y_train) * X_train_bar.T
-        param_influence = Hessian_inv @ grad_loss_train / n
+        param_influence = Hessian_inv @ grad_loss_train
 
         x_test_bar = np.hstack((1, x_test))
-        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][y_test]
-        phi = (1 - sigma_test) * sigma_test * x_test_bar
+        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+        # phi = (1 - sigma_test) * sigma_test * x_test_bar
+        phi = (2 * y_test - 1) * x_test_bar
 
         influence = (phi @ param_influence).reshape(-1)
 
