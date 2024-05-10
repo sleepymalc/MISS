@@ -25,22 +25,6 @@ if __name__ == "__main__":
 
     checkpoint_files = [f"./checkpoint/seed_{args.seed}_ensemble_{i}.pt" for i in range(args.ensemble)]
 
-    # # TRAK
-    # trak = MISS_TRAK(model=MLP().to(device),
-    #                  model_checkpoints=checkpoint_files,
-    #                  train_loader=train_loader,
-    #                  test_loader=test_loader,
-    #                  model_output_class=MNISTModelOutput,
-    #                  proj_dim=1000,
-    #                  device=device)
-
-    # MISS = trak.most_k(args.k)
-    # torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
-
-    # MISS = trak.adaptive_most_k(args.k)
-    # torch.save(MISS, f"./results/TRAK/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive.pt")
-
-
     # IF
     IF = MISS_IF(model=CNN().to(device),
                  model_checkpoints=checkpoint_files,

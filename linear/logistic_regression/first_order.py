@@ -1,67 +1,59 @@
 import numpy as np
 from sklearn.linear_model import LogisticRegression
-from target import target_phi, target_influence
 
-def first_order(X_train, y_train, X_test, y_test, target="probability"):
+def first_order(X_train, y_train, x_test, y_test):
     n = X_train.shape[0]
     lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
 
     # Compute the Hessian w.r.t. the parameters
-    Hessian = np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n
-
-    Hessian_inv = np.linalg.inv(Hessian)
+    Hessian_inv = np.linalg.inv(np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n)
 
     # Compute the gradient of the logistic loss w.r.t. the parameters
     sigma_train = lr.predict_proba(X_train)[:, 1] # P(1 | x)
     grad_loss_train = (sigma_train - y_train) * X_train_bar.T
     param_influence = Hessian_inv @ grad_loss_train / n
 
-    phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+    x_test_bar = np.hstack((1, x_test))
+    sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+    phi = (1 - sigma_test) * sigma_test * x_test_bar
 
-    influence = target_influence(phi, param_influence, target=target)
+    influence = (phi @ param_influence).reshape(-1)
 
     FO_best = np.argsort(influence)[-n:][::-1]
 
     return FO_best
 
-def adaptive_first_order(X_train, y_train, X_test, y_test, k=5, target="probability"):
+def adaptive_first_order(X_train, y_train, x_test, y_test, k=5):
     n = X_train.shape[0]
-    lr = LogisticRegression(penalty=None).fit(X_train, y_train)
-
     X_train_bar = np.hstack((np.ones((X_train.shape[0], 1)), X_train))
-    X_train_bar_with_index = np.hstack((X_train_bar, np.arange(n).reshape(-1, 1)))
+    index = list(range(n))
     adaptive_FO_best_k = np.zeros(k, dtype=int)
 
     for i in range(k):
-        Hessian = np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n
+        lr = LogisticRegression(penalty=None).fit(X_train, y_train)
 
-        Hessian_inv = np.linalg.inv(Hessian)
+        Hessian_inv = np.linalg.inv(np.dot(X_train_bar.T, np.dot(np.diag(lr.predict_proba(X_train)[:, 1] * (1 - lr.predict_proba(X_train)[:, 1])), X_train_bar)) / n)
 
         # Compute the gradient of the logistic loss w.r.t. the parameters
         sigma_train = lr.predict_proba(X_train)[:, 1] # P(1 | x)
         grad_loss_train = (sigma_train - y_train) * X_train_bar.T
         param_influence = Hessian_inv @ grad_loss_train / n
 
-        phi = target_phi(X_train, y_train, X_test, y_test, target=target)
+        x_test_bar = np.hstack((1, x_test))
+        sigma_test = lr.predict_proba(x_test.reshape(1, -1))[0][1]
+        phi = (1 - sigma_test) * sigma_test * x_test_bar
 
-        influence = target_influence(phi, param_influence, target=target)
+        influence = (phi @ param_influence).reshape(-1)
 
-        print_size = k * 2
-        top_indices = np.argsort(influence)[-(print_size):][::-1]
-
-        actual_top_indices = X_train_bar_with_index[:, -1][top_indices].astype(int)
-        adaptive_FO_best_k[i] = actual_top_indices[0]
+        top_index = np.argsort(influence)[-1:][::-1][0]
+        adaptive_FO_best_k[i] = index[top_index]
 
         # Remove the most influential data points
-        X_train = np.delete(X_train, top_indices[0], axis=0)
-        X_train_bar = np.delete(X_train_bar, top_indices[0], axis=0)
-        X_train_bar_with_index = np.delete(X_train_bar_with_index, top_indices[0], axis=0)
-        y_train = np.delete(y_train, top_indices[0], axis=0)
-
-
-        # Train to full convergence
-        lr = LogisticRegression(penalty=None).fit(X_train_bar_with_index[:, 1:-1], y_train)
+        X_train = np.delete(X_train, top_index, axis=0)
+        X_train_bar = np.delete(X_train_bar, top_index, axis=0)
+        y_train = np.delete(y_train, top_index, axis=0)
+        index = np.delete(index, top_index, axis=0)
 
     return adaptive_FO_best_k
