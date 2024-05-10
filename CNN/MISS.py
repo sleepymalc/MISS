@@ -1,4 +1,3 @@
-from MISS_TRAK import MISS_TRAK
 from MISS_IF import MISS_IF
 from model_train import CNN, MNISTModelOutput
 from utlis.data import data_generation
