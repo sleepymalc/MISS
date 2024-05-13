@@ -11,11 +11,11 @@ print("Using device:", device)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_size", type=int, default=5000, help="train dataset size")
-    parser.add_argument("--test_size", type=int, default=500, help="test dataset size")
+    parser.add_argument("--test_size", type=int, default=50, help="test dataset size")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--k", type=int, default=50, help="size of the most influential subset")
-    parser.add_argument("--step", type=int, default=10, help="step size for adaptive influence function")
+    parser.add_argument("--step", type=int, default=5, help="step size for adaptive influence function")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
