@@ -35,7 +35,7 @@ class MISS_IF:
 
         self.model_output_class = model_output_class
         self.device = device
-        self.warm_start = True ## hard-coded warm start otherwise too time-consuming
+        self.warm_start = True # hard-coded warm start otherwise too time-consuming
 
     def _convert_from_loader(self, loader):
         data = [(features, labels) for features, labels in loader]
