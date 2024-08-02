@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("--train_size", type=int, default=5000, help="train dataset size")
     parser.add_argument("--test_size", type=int, default=50, help="test dataset size")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
+    parser.add_argument("--warm_start", action='store_true', help="enable warm start")
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--k", type=int, default=50, help="size of the most influential subset")
     parser.add_argument("--step", type=int, default=5, help="step size for adaptive influence function")
@@ -29,11 +30,18 @@ if __name__ == "__main__":
                  train_loader=train_loader,
                  test_loader=test_loader,
                  model_output_class=MNISTModelOutput,
+                 warm_start=args.warm_start,
                  device=device)
 
     # Retrain the model without the most influential samples for every test point
     MISS = IF.most_k(args.k)
-    torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
+    if args.warm_start:
+        torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_w.pt")
+    else:
+        torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}.pt")
 
     MISS = IF.adaptive_most_k(args.k, step_size=args.step)
-    torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}.pt")
+    if args.warm_start:
+        torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_w.pt")
+    else:
+        torch.save(MISS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}.pt")

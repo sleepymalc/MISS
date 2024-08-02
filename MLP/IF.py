@@ -12,6 +12,7 @@ class MISS_IF:
                  train_loader,
                  test_loader,
                  model_output_class,
+                 warm_start,
                  device):
         '''
         :param model: a nn.module instance, no need to load any checkpoint
@@ -34,8 +35,8 @@ class MISS_IF:
         self.test_loader_cpy = test_loader
 
         self.model_output_class = model_output_class
+        self.warm_start = warm_start
         self.device = device
-        self.warm_start = True # hard-coded warm start otherwise too time-consuming
 
     def _convert_from_loader(self, loader):
         data = [(features, labels) for features, labels in loader]
@@ -78,7 +79,6 @@ class MISS_IF:
         test_size = len(self.test_loader)
         MISS = torch.zeros(test_size, k, dtype=torch.int32)
 
-        print("Start TRAK greedy")
         for i in range(test_size):
             MISS[i, :] = torch.topk(influence_mean[i], k).indices
 
@@ -114,13 +114,19 @@ class MISS_IF:
                     if self.warm_start:
                         self.model.load_state_dict(torch.load(checkpoint_file))
                         epochs = 8
+                        self.model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
+                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt")
                     else:
                         self.model = self.model_cpy
                         epochs = 30
-                    self.model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
-                    torch.save(self.model.state_dict(), f"./checkpoint/tmp/seed_{seed}_{idx}.pt")
+                        self.model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
+                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt")
 
-                self.model_checkpoints = [f"./checkpoint/tmp/seed_{seed}_{ensemble_idx}.pt" for ensemble_idx in range(ensemble_num)]
+                if i == 0:
+                    if self.warm_start:
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt" for idx in range(ensemble_num)]
+                    else:
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(ensemble_num)]
             self._reset()
 
         return MISS

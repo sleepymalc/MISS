@@ -6,7 +6,7 @@
 
 ## Multi-Layer Perceptron
 
-> Before running the script, you will need to manually create the following directories: `./MLP/checkpoint`, `./MLP/checkpoint/tmp`, `./MLP/results/Eval`, and `./MLP/results/IF`.
+> Before running the script, you will need to manually create the following directories: `./MLP/checkpoint`, `./MLP/checkpoint/adaptive_tmp`, `./MLP/results/Eval`, and `./MLP/results/IF`.
 
 1. `python train_model.py --train_size 5000 --test_size 500 --ensemble 5 --seed 0`. This will train a number of models specified by `--ensemble`, and save them to `./MLP/checkpoint`.
 2. `python MISS.py --train_size 5000 --test_size 500 --ensemble 5 --seed 0 --k 50 --step 5`. This runs the MISS computation, and save the result to `./MLP/results/IF`.
