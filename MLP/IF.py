@@ -81,37 +81,37 @@ class MISS_IF:
 
         # Calculate the indices of top k influential samples for each test sample
         test_size = len(self.test_loader)
-        MISS = torch.zeros(test_size, k, dtype=torch.int32)
+        MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
         for i in range(test_size):
-            MISS[i, :] = torch.topk(influence_mean[i], k).indices
+            MIS[i, :] = torch.topk(influence_mean[i], k).indices
 
         self._reset()
-        return MISS
+        return MIS
 
 
     def adaptive_most_k(self, k, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
         seed = int(re.search(r'seed_(\d+)_ensemble_(\d+)', self.model_checkpoints[0]).group(1))
-        MISS = torch.zeros(test_size, k, dtype=torch.int32)
+        MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
         for j in tqdm(range(test_size)):
             index = list(range(train_size))
             step = step_size
             for i in range(0, k, step_size):
-                self.train_loader, self.test_loader = data_generation([l for l in range(train_size) if l not in MISS[j, :i]], list(range(test_size)), mode='MISS')
+                self.train_loader, self.test_loader = data_generation([l for l in range(train_size) if l not in MIS[j, :i]], list(range(test_size)), mode='MISS')
 
                 # handle overflow
                 if i + step > k:
                     step = k - i
 
                 max_idx_list = self.most_k(step)[j, :]
-                MISS[j, i:i+step] = torch.tensor([index[l] for l in max_idx_list])
+                MIS[j, i:i+step] = torch.tensor([index[l] for l in max_idx_list])
                 index = [index[i] for i in range(len(index)) if i not in max_idx_list]
 
                 # update the model, the dataset
-                train_loader, _ = data_generation([i for i in range(train_size) if i not in MISS[j, :k]], list(range(test_size)), mode='train')
+                train_loader, _ = data_generation([i for i in range(train_size) if i not in MIS[j, :k]], list(range(test_size)), mode='train')
 
                 for idx, checkpoint_file in enumerate(self.model_checkpoints):
                     if self.warm_start:
@@ -132,4 +132,4 @@ class MISS_IF:
                         self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
             self._reset()
 
-        return MISS
+        return MIS
