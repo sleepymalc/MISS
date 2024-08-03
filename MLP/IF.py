@@ -11,6 +11,7 @@ class MISS_IF:
                  model_checkpoints,
                  train_loader,
                  test_loader,
+                 ensemble,
                  model_output_class,
                  warm_start,
                  device):
@@ -18,7 +19,8 @@ class MISS_IF:
         :param model: a nn.module instance, no need to load any checkpoint
         :param model_checkpoints: a list of checkpoint path, the length of this list indicates the ensemble model number
         :param train_loader: train samples in a data loader
-        :param train_loader: test samples in a data loader
+        :param test_loader: test samples in a data loader
+        :param ensemble: ensemble number
         :param model_output_class: a class definition inheriting BaseModelOutputClass
         :param device: the device running
         '''
@@ -33,6 +35,8 @@ class MISS_IF:
 
         self.test_loader = test_loader
         self.test_loader_cpy = test_loader
+
+        self.ensemble = ensemble
 
         self.model_output_class = model_output_class
         self.warm_start = warm_start
@@ -89,7 +93,6 @@ class MISS_IF:
     def adaptive_most_k(self, k, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
-        ensemble_num = len(self.model_checkpoints)
         seed = int(re.search(r'seed_(\d+)_ensemble_(\d+)', self.model_checkpoints[0]).group(1))
         MISS = torch.zeros(test_size, k, dtype=torch.int32)
 
@@ -124,12 +127,9 @@ class MISS_IF:
 
                 if i == 0:
                     if self.warm_start:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt" for idx in range(ensemble_num)]
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
                     else:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(ensemble_num)]
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
             self._reset()
-
-            if self.device.type == "cuda":
-                torch.cuda.empty_cache()
 
         return MISS
