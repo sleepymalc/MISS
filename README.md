@@ -30,7 +30,7 @@ Before running the script, you will need to manually create the following direct
 	- `warm_start` and `step`: These two flags only takes effect when `adaptive` is specified.
 	- `test_start_idx`: Construct the test dataset with index between `test_start_idx` and `test_start_idx + test_size`.
 		>We use `test_start_idx` due to insufficient memory: initialization takes around 40 GB CUDA memory already, and after processing each test point the memory allocation increased by a non-negligible amount, which suffices to cause a CUDA out of memory error.
-3. Run `real_world.ipynb` to evaluate the performance and generate plots. The evaluation result will be saved to `./MLP/results/Eval` if `load_eval` is set to `False` (you will need to do this at the first time).
+3. Run `evaluation.ipynb` to evaluate the performance and generate plots. The evaluation result will be saved to `./MLP/results/Eval` if `load_eval` is set to `False` (you will need to do this at the first time).
 	>The evaluation script will aggregates all batches in the second step together.
 
 A sample script for the first two steps:
