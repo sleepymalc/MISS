@@ -15,7 +15,7 @@ Before running the script, you will need to manually create the following direct
 	>Here the test dataset is used to show the final accuracy purely, nothing else (didn't use it for cross-validation, etc.). In other words, it won't affect the next step in any way.
 2. Solve the MISS and save the result to `./MLP/results/IF`. For the naive greedy:
 	```bash
-	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50 --naive
+	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50
 	```
 	For the (stepped) adaptive greedy:
 	```bash
