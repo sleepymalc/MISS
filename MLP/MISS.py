@@ -42,14 +42,14 @@ if __name__ == "__main__":
     if args.naive:
         MIS = IF.most_k(args.k)
         if args.warm_start:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size}_w.pt")
+            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}_w.pt")
         else:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size}.pt")
+            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
 
     # MISS with adaptive greedy
     if args.adaptive:
         MIS = IF.adaptive_most_k(args.k, step_size=args.step)
         if args.warm_start:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size}_w.pt")
+            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}_w.pt")
         else:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size}.pt")
+            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
