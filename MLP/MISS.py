@@ -37,14 +37,12 @@ if __name__ == "__main__":
                  warm_start=args.warm_start,
                  device=device)
 
-    # MISS with greedy
-    if not args.adaptive:
+    if not args.adaptive: # MISS with greedy
         MIS = IF.most_k(args.k)
         torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
-    else:
-    # MISS with adaptive greedy
+    else: # MISS with adaptive greedy
         MIS = IF.adaptive_most_k(args.k, step_size=args.step)
         if args.warm_start:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}_w.pt")
+            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_warm-start_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
         else:
             torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_adaptive_step_{args.step}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
