@@ -129,4 +129,7 @@ class MISS_IF:
                         self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(ensemble_num)]
             self._reset()
 
+            if self.device == "cuda":
+                torch.cuda.empty_cache()
+
         return MISS
