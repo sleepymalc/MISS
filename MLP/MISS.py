@@ -17,7 +17,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_start_idx", type=int, default=0, help="test dataset starting index")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
     parser.add_argument("--k", type=int, default=50, help="size of the most influential subset")
-    parser.add_argument("--warm_start", action='store_true', help="enable warm start")
+    parser.add_argument("--warm_start", action='store_true', help="enable warm start for adaptive greedy")
     parser.add_argument("--naive", action='store_true', help="evaluate naive greedy")
     parser.add_argument("--adaptive", action='store_true', help="evaluate adaptive greedy")
     parser.add_argument("--step", type=int, default=5, help="step size for adaptive greedy")
@@ -41,10 +41,7 @@ if __name__ == "__main__":
     # MISS with greedy
     if args.naive:
         MIS = IF.most_k(args.k)
-        if args.warm_start:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}_w.pt")
-        else:
-            torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
+        torch.save(MIS, f"./results/IF/seed_{args.seed}_k_{args.k}_ensemble_{args.ensemble}_test_{args.test_start_idx}-{args.test_start_idx+args.test_size - 1}.pt")
 
     # MISS with adaptive greedy
     if args.adaptive:
