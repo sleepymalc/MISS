@@ -12,7 +12,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--train_size", type=int, default=5000, help="train dataset size")
-    # parser.add_argument("--train_start_idx", type=int, default=0, help="train dataset starting index") # We see no actual reason to change this
     parser.add_argument("--test_size", type=int, default=50, help="test dataset size")
     parser.add_argument("--test_start_idx", type=int, default=0, help="test dataset starting index")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
