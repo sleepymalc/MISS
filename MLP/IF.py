@@ -89,7 +89,6 @@ class MISS_IF:
         self._reset()
         return MIS
 
-
     def adaptive_most_k(self, k, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
