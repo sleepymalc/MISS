@@ -14,7 +14,7 @@ Before running the script, you will need to manually create the following direct
 	```
 	Note that the training set and the test set is constructed deterministically: in the above example, it'll take the first 5000 training samples and 500 test samples.
 
-	>Here the test dataset is used to show the final accuracy purely, nothing else (didn't use it for cross-validation, etc.). In other words, it won't affect the next step in any way.
+	>The test dataset here is only used to show the accuracy of the model; we do not use it for selecting the model (e.g., cross-validation). In other words, it won't affect the next step in any way.
 2. Solve the MISS and save the result to `./MLP/results/IF`. For the naive greedy:
 	```bash
 	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50

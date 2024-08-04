@@ -3,7 +3,6 @@ from pydvl.influence.torch import EkfacInfluence
 from utlis.grad_calculator import count_parameters, grad_calculator
 from utlis.data import data_generation
 from tqdm import tqdm
-import re
 
 class MISS_IF:
     def __init__(self,
@@ -22,7 +21,7 @@ class MISS_IF:
         :param test_loader: test samples in a data loader
         :param ensemble: ensemble number
         :param model_output_class: a class definition inheriting BaseModelOutputClass
-        :param seed: seed
+        :param seed: previous experiment's seed
         :param device: the device running
         '''
         self.model = model
@@ -35,7 +34,7 @@ class MISS_IF:
         self.train_loader_cpy = train_loader
 
         self.test_loader = test_loader
-        self.test_loader_cpy = test_loader
+        self.test_loader_cpy = test_loader # We won't touch this but just to be safe
 
         self.ensemble = ensemble
 
