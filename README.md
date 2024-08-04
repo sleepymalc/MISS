@@ -17,19 +17,19 @@ Before running the script, you will need to manually create the following direct
 	>The test dataset here is only used to show the accuracy of the model; we do not use it for selecting the model (e.g., cross-validation). In other words, it won't affect the next step in any way.
 2. Solve the MISS and save the result to `./MLP/results/IF`. For the naive greedy:
 	```bash
-	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50
+	python MISS.py --seed 0 --train_size 5000 --test_range 0:49 --test_start_idx 0 --ensemble 5 --k 50
 	```
 	For the (stepped) adaptive greedy:
 	```bash
-	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50 --adaptive --warm_start --step 5
+	python MISS.py --seed 0 --train_size 5000 --test_range 0:49 --test_start_idx 0 --ensemble 5 --k 50 --adaptive --warm_start --step 5
 	```
 	Several notes on the flag:
 	- `seed`: The seed used for the previous (step 1) experiment.
 		>Note that step is deterministic (the training involved in this step is always controlled by some fixed seeds to avoid confusion).
 	- `adaptive`: If specified, then the adaptive greedy will be used.
 	- `warm_start` and `step`: These two flags only takes effect when `adaptive` is specified.
-	- `test_start_idx`: Construct the test dataset with index between `test_start_idx` and `test_start_idx + test_size`.
-		>We use `test_start_idx` due to insufficient memory: initialization takes around 40 GB CUDA memory already, and after processing each test point the memory allocation increased by a non-negligible amount, which suffices to cause a CUDA out of memory error.
+	- `test_range`: Construct the test dataset with index between the specified range in the format of `start:end` (inclusive).
+		>This allows batched processing due to insufficient memory: initialization takes around 40 GB CUDA memory already, and after processing each test point the memory allocation increased by a non-negligible amount, which suffices to cause a CUDA out of memory error.
 3. Run `evaluation.ipynb` to evaluate the performance and generate plots. The evaluation result will be saved to `./MLP/results/Eval` if `load_eval` is set to `False` (you will need to do this at the first time).
 	>The evaluation script will aggregates all batches in the second step together.
 
@@ -38,8 +38,8 @@ A sample script for the first two steps:
 ```bash
 python3 model_train.py --seed 0 --train_size 5000 --test_size 500 --ensemble 5
 
-python3 MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50
+python3 MISS.py --seed 0 --train_size 5000 --test_range 0:49 --ensemble 5 --k 50
 
-python3 MISS.py --seed 0 --train_size 5000 --test_size 25 --test_start_idx 0 --ensemble 5 --k 50 --adaptive --warm_start --step 5
-python3 MISS.py --seed 0 --train_size 5000 --test_size 25 --test_start_idx 25 --ensemble 5 --k 50 --adaptive --warm_start --step 5
+python3 MISS.py --seed 0 --train_size 5000 --test_range 0:24 --ensemble 5 --k 50 --adaptive --warm_start --step 5
+python3 MISS.py --seed 0 --train_size 5000 --test_range 25:49 --ensemble 5 --k 50 --adaptive --warm_start --step 5
 ```
