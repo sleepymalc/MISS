@@ -24,8 +24,8 @@ Before running the script, you will need to manually create the following direct
 	python MISS.py --seed 0 --train_size 5000 --test_size 50 --test_start_idx 0 --ensemble 5 --k 50 --adaptive --warm_start --step 5
 	```
 	Several notes on the flag:
-	- `seed`: The whole seed of the experiment.
-		>Although not required, but the `seed` used in this step should be consistent as the first step to avoid any confusion.
+	- `seed`: The seed used for the previous (step 1) experiment.
+		>Note that step is deterministic (the training involved in this step is always controlled by some fixed seeds to avoid confusion).
 	- `adaptive`: If specified, then the adaptive greedy will be used.
 	- `warm_start` and `step`: These two flags only takes effect when `adaptive` is specified.
 	- `test_start_idx`: Construct the test dataset with index between `test_start_idx` and `test_start_idx + test_size`.

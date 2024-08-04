@@ -13,7 +13,7 @@ class MISS_IF:
                  test_loader,
                  ensemble,
                  model_output_class,
-                 warm_start,
+                 seed,
                  device):
         '''
         :param model: a nn.module instance, no need to load any checkpoint
@@ -22,6 +22,7 @@ class MISS_IF:
         :param test_loader: test samples in a data loader
         :param ensemble: ensemble number
         :param model_output_class: a class definition inheriting BaseModelOutputClass
+        :param seed: seed
         :param device: the device running
         '''
         self.model = model
@@ -39,7 +40,7 @@ class MISS_IF:
         self.ensemble = ensemble
 
         self.model_output_class = model_output_class
-        self.warm_start = warm_start
+        self.seed = seed
         self.device = device
 
     def _convert_from_loader(self, loader):
@@ -89,17 +90,16 @@ class MISS_IF:
         self._reset()
         return MIS
 
-    def adaptive_most_k(self, k, step_size=5):
+    def adaptive_most_k(self, k, warm_start=True, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
-        seed = int(re.search(r'seed_(\d+)_ensemble_(\d+)', self.model_checkpoints[0]).group(1))
         MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
         for j in tqdm(range(test_size)):
             index = list(range(train_size))
             step = step_size
             for i in range(0, k, step_size):
-                self.train_loader, self.test_loader = data_generation([l for l in range(train_size) if l not in MIS[j, :i]], list(range(test_size)), mode='MISS')
+                self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[j, :i]], list(range(test_size)), mode='MISS')
 
                 # handle overflow
                 if i + step > k:
@@ -110,25 +110,23 @@ class MISS_IF:
                 index = [index[i] for i in range(len(index)) if i not in max_idx_list]
 
                 # update the model, the dataset
-                train_loader, _ = data_generation([i for i in range(train_size) if i not in MIS[j, :k]], list(range(test_size)), mode='train')
+                train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[j, :i+step]], list(range(test_size)), mode='train')
 
                 for idx, checkpoint_file in enumerate(self.model_checkpoints):
-                    if self.warm_start:
+                    if warm_start:
                         self.model.load_state_dict(torch.load(checkpoint_file))
-                        epochs = 8
-                        self.model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
-                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt")
+                        self.model.train_with_seed(train_loader, epochs=8, seed=idx, verbose=False)
+                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt")
                     else:
                         self.model = self.model_cpy
-                        epochs = 30
-                        self.model.train_with_seed(train_loader, epochs=epochs, seed=idx, verbose=False)
-                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt")
+                        self.model.train_with_seed(train_loader, epochs=30, seed=idx, verbose=False)
+                        torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt")
 
                 if i == 0:
-                    if self.warm_start:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
+                    if warm_start:
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
                     else:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
+                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
             self._reset()
 
         return MIS

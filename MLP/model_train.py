@@ -1,6 +1,4 @@
 import argparse
-import random
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -78,8 +76,6 @@ class MLP(nn.Module):
 
     def train_with_seed(self, train_loader, epochs=30, seed=0, verbose=True):
         torch.manual_seed(seed)
-        random.seed(seed)
-        np.random.seed(seed)
 
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.SGD(self.parameters(), lr=0.01, momentum=0.9)
@@ -146,8 +142,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
-    random.seed(args.seed)
-    np.random.seed(args.seed)
 
     train_loader, test_loader = data_generation(list(range(args.train_size)), list(range(args.test_size)), mode='train')
 
