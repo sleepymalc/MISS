@@ -22,8 +22,6 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0, help="seed")
     parser.add_argument("--train_size", type=int, default=5000, help="train dataset size")
     parser.add_argument("--test_range", type=parse_range, required=True, help="test dataset range. Format: 'start:end'")
-    # parser.add_argument("--test_size", type=int, default=50, help="test dataset size")
-    # parser.add_argument("--test_start_idx", type=int, default=0, help="test dataset starting index")
     parser.add_argument("--ensemble", type=int, default=5, help="ensemble number")
     parser.add_argument("--k", type=int, default=50, help="size of the most influential subset")
     parser.add_argument("--adaptive", action='store_true', help="use adaptive greedy")
