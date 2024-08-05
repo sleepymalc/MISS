@@ -94,22 +94,22 @@ class MISS_IF:
         train_size = len(self.train_loader)
         MIS = torch.zeros(test_size, k, dtype=torch.int32)
 
-        for j in tqdm(range(test_size)):
+        for i in tqdm(range(test_size)):
             index = list(range(train_size))
             step = step_size
-            for i in range(0, k, step_size):
-                self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[j, :i]], list(range(test_size)), mode='MISS')
+            for j in range(0, k, step_size):
+                # handle overflow of j+step
+                if j + step > k:
+                    step = k - j
 
-                # handle overflow
-                if i + step > k:
-                    step = k - i
+                self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j]], list(range(test_size)), mode='MISS')
 
-                max_idx_list = self.most_k(step)[j, :]
-                MIS[j, i:i+step] = torch.tensor([index[l] for l in max_idx_list])
+                max_idx_list = self.most_k(step)[i, :]
+                MIS[i, j:j+step] = torch.tensor([index[l] for l in max_idx_list])
                 index = [index[i] for i in range(len(index)) if i not in max_idx_list]
 
                 # update the model, the dataset
-                train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[j, :i+step]], list(range(test_size)), mode='train')
+                train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j+step]], list(range(test_size)), mode='train')
 
                 for idx, checkpoint_file in enumerate(self.model_checkpoints):
                     if warm_start:
@@ -121,7 +121,7 @@ class MISS_IF:
                         self.model.train_with_seed(train_loader, epochs=30, seed=idx, verbose=False)
                         torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt")
 
-                if i == 0:
+                if j == 0:
                     if warm_start:
                         self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
                     else:
