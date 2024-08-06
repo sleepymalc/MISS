@@ -3,6 +3,7 @@ from pydvl.influence.torch import EkfacInfluence
 from utlis.grad_calculator import count_parameters, grad_calculator
 from utlis.data import data_generation
 from tqdm import tqdm
+import copy
 
 class MISS_IF:
     def __init__(self,
@@ -25,16 +26,16 @@ class MISS_IF:
         :param device: the device running
         '''
         self.model = model
-        self.model_cpy = model
+        self.model_cpy = copy.deepcopy(model)
 
         self.model_checkpoints = model_checkpoints
-        self.model_checkpoints_cpy = model_checkpoints
+        self.model_checkpoints_cpy = copy.deepcopy(model_checkpoints)
 
         self.train_loader = train_loader
-        self.train_loader_cpy = train_loader
+        self.train_loader_cpy = copy.deepcopy(train_loader)
 
         self.test_loader = test_loader
-        self.test_loader_cpy = test_loader # We won't touch this but just to be safe
+        self.test_loader_cpy = copy.deepcopy(test_loader) # We won't touch this but just to be safe
 
         self.ensemble = ensemble
 
@@ -106,7 +107,7 @@ class MISS_IF:
 
                 max_idx_list = self.most_k(step)[i, :]
                 MIS[i, j:j+step] = torch.tensor([index[l] for l in max_idx_list])
-                index = [index[i] for i in range(len(index)) if i not in max_idx_list]
+                index = [index[l] for l in range(len(index)) if l not in max_idx_list]
 
                 # update the model, the dataset
                 train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j+step]], list(range(test_size)), mode='train')
