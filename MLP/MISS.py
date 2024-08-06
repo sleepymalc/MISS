@@ -29,6 +29,8 @@ if __name__ == "__main__":
     parser.add_argument("--step", type=int, default=5, help="step size for adaptive greedy")
     args = parser.parse_args()
 
+    torch.manual_seed(args.seed)
+
     test_start_idx, test_end_idx = args.test_range
 
     train_loader, test_loader = data_generation(list(range(args.train_size)), list(range(test_start_idx, test_end_idx + 1)), mode='MISS')
