@@ -74,11 +74,11 @@ class MLP(nn.Module):
         x = self.layers[-1](x)
         return x
 
-    def train_with_seed(self, train_loader, epochs=30, seed=0, verbose=True):
+    def train_with_seed(self, train_loader, epochs=30, seed=0, lr=0.01, momentum=0.9, verbose=True):
         torch.manual_seed(seed)
 
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.SGD(self.parameters(), lr=0.01, momentum=0.9)
+        optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum)
         for epoch in range(epochs):
             running_loss = 0.0
             for images, labels in train_loader:
@@ -94,7 +94,7 @@ class MLP(nn.Module):
         if verbose:
             print("Training complete")
 
-    def test(self, test_loader):
+    def test(self, test_loader, verbose=True):
         self.eval()
         correct = 0
         total = 0
@@ -108,7 +108,9 @@ class MLP(nn.Module):
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
         accuracy = 100 * correct / total
-        print(f'Accuracy of the model on the test set: {accuracy:.2f}%')
+        if verbose:
+            print(f'Accuracy of the model on the test set: {accuracy:.2f}%')
+        return accuracy
 
     def get_individual_output(self, test_loader):
         self.eval()
@@ -143,10 +145,17 @@ if __name__ == "__main__":
 
     torch.manual_seed(args.seed)
 
-    for i in range(args.fold):
-        train_loader, test_loader = data_generation(list(range(i * args.train_size, (i+1)*args.train_size)), list(range(i * args.test_size, (i+1) * args.test_size)), mode='train')
+    for lr in [0.01, 0.05, 0.1, 0.5]:
+        for momentum in [0.9, 0.95]:
+            for epochs in [30, 50]:
+                for width in [64, 128]:
+                    auc = 0
+                    for i in range(args.fold):
+                        train_loader, test_loader = data_generation(list(range(i * args.train_size, (i+1)*args.train_size)), list(range(args.test_size)), mode='train')
 
-        # Initialize the model, loss function, and optimizer
-        model = MLP().to(device)
-        model.train_with_seed(train_loader, epochs=30, seed=i)
-        model.test(test_loader)
+                        # Initialize the model, loss function, and optimizer
+                        model = MLP(hidden_size=width).to(device)
+                        model.train_with_seed(train_loader, epochs=epochs, seed=i, lr=lr, momentum=momentum, verbose=False)
+
+                        auc += model.test(test_loader, verbose=False)
+                    print(f"width: {width}\t| lr: {lr}\t| mom: {momentum}\t| epochs: {epochs}\t| auc: {auc / 5}")
