@@ -1,7 +1,7 @@
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Sampler
 
-class SubsetSampler(Sampler):
+class SubsetSamper(Sampler):
     def __init__(self, indices):
         self.indices = indices
 
@@ -19,10 +19,12 @@ def data_generation(train_indices, test_indices, mode='train'):
 
     if mode == 'train':
         train_batch_size, test_batch_size = 64, 64
+    elif mode == 'eval':
+        train_batch_size, test_batch_size = 64, 1
     elif mode == 'MISS':
         train_batch_size, test_batch_size = 1, 1
 
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, sampler=SubsetSampler(train_indices))
-    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, sampler=SubsetSampler(test_indices))
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, sampler=SubsetSamper(train_indices))
+    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, sampler=SubsetSamper(test_indices))
 
     return train_loader, test_loader
