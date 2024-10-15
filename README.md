@@ -77,7 +77,7 @@ python3 MISS.py --seed 0 --train_size 5000 --test_range 25:49 --ensemble 5 --k 5
 If you find this repository valuable, please give it a star! Got any questions or feedback? Feel free to open an issue. Using this in your work? Please reference us using the provided citation:
 
 ```bibtex
-@inproceedings{Hu2024most,
+@inproceedings{hu2024most,
   author    = {Yuzheng Hu and Pingbang Hu and Han Zhao and Jiaqi W. Ma},
   title     = {Most Influential Subset Selection: Challenges, Promises, and Beyond},
   booktitle = {Advances in Neural Information Processing Systems},
