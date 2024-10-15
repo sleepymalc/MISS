@@ -78,10 +78,10 @@ If you find this repository valuable, please give it a star! Got any questions o
 
 ```bibtex
 @inproceedings{Hu2024most,
-  title={Most Influential Subset Selection: Challenges, Promises, and Beyond}, 
-author={Yuzheng Hu and Pingbang Hu and Han Zhao and Jiaqi W. Ma},
-  booktitle = {Advances in Neural Information Processing Systems},
-  volume={37},
-  year={2024}
+	title={Most Influential Subset Selection: Challenges, Promises, and Beyond},
+	author={Yuzheng Hu and Pingbang Hu and Han Zhao and Jiaqi W. Ma},
+	booktitle = {Advances in Neural Information Processing Systems},
+	volume={37},
+	year={2024}
 }
 ```
