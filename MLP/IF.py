@@ -26,7 +26,6 @@ class MISS_IF:
         :param device: the device running
         '''
         self.model = model
-        self.model_cpy = copy.deepcopy(model)
 
         self.model_checkpoints = model_checkpoints
         self.model_checkpoints_cpy = copy.deepcopy(model_checkpoints)
@@ -50,7 +49,6 @@ class MISS_IF:
         return concatenated_data
 
     def _reset(self):
-        self.model = self.model_cpy
         self.model_checkpoints = self.model_checkpoints_cpy
         self.train_loader = self.train_loader_cpy
         self.test_loader = self.test_loader_cpy
@@ -90,6 +88,47 @@ class MISS_IF:
         self._reset()
         return MIS
 
+    # def adaptive_most_k(self, k, warm_start=True, step_size=5):
+    #     test_size = len(self.test_loader)
+    #     train_size = len(self.train_loader)
+    #     MIS = torch.zeros(test_size, k, dtype=torch.int32)
+
+    #     for i in tqdm(range(test_size)):
+    #         index = list(range(train_size))
+    #         step = step_size
+    #         for j in range(0, k, step_size):
+    #             # handle overflow of j+step
+    #             if j + step > k:
+    #                 step = k - j
+
+    #             self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j]], list(range(test_size)), mode='MISS')
+
+    #             max_idx_list = self.most_k(step)[i, :]
+    #             MIS[i, j:j+step] = torch.tensor([index[l] for l in max_idx_list])
+    #             index = [index[l] for l in range(len(index)) if l not in max_idx_list]
+
+    #             # update the model, the dataset
+    #             train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j+step]], list(range(test_size)), mode='train')
+
+    #             for idx, checkpoint_file in enumerate(self.model_checkpoints):
+    #                 if warm_start:
+    #                     self.model.load_state_dict(torch.load(checkpoint_file))
+    #                     self.model.train_with_seed(train_loader, epochs=8, seed=idx, verbose=False)
+    #                     torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt")
+    #                 else:
+    #                     self.model = self.model_cpy
+    #                     self.model.train_with_seed(train_loader, epochs=30, seed=idx, verbose=False)
+    #                     torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt")
+
+    #             if j == 0:
+    #                 if warm_start:
+    #                     self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
+    #                 else:
+    #                     self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
+    #         self._reset()
+
+    #     return MIS
+
     def adaptive_most_k(self, k, warm_start=True, step_size=5):
         test_size = len(self.test_loader)
         train_size = len(self.train_loader)
@@ -99,15 +138,15 @@ class MISS_IF:
             index = list(range(train_size))
             step = step_size
             for j in range(0, k, step_size):
-                # handle overflow of j+step
+                self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j]], list(range(test_size)), mode='MISS')
+
+                # handle overflow
                 if j + step > k:
                     step = k - j
 
-                self.train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j]], list(range(test_size)), mode='MISS')
-
                 max_idx_list = self.most_k(step)[i, :]
                 MIS[i, j:j+step] = torch.tensor([index[l] for l in max_idx_list])
-                index = [index[l] for l in range(len(index)) if l not in max_idx_list]
+                index = [index[i] for i in range(len(index)) if i not in max_idx_list]
 
                 # update the model, the dataset
                 train_loader, _ = data_generation([l for l in range(train_size) if l not in MIS[i, :j+step]], list(range(test_size)), mode='train')
@@ -122,11 +161,10 @@ class MISS_IF:
                         self.model.train_with_seed(train_loader, epochs=30, seed=idx, verbose=False)
                         torch.save(self.model.state_dict(), f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt")
 
-                if j == 0:
-                    if warm_start:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
-                    else:
-                        self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
+                if warm_start:
+                    self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}_w.pt" for idx in range(self.ensemble)]
+                else:
+                    self.model_checkpoints = [f"./checkpoint/adaptive_tmp/seed_{self.seed}_ensemble_{idx}.pt" for idx in range(self.ensemble)]
             self._reset()
 
         return MIS
